@@ -1,17 +1,36 @@
-import React from "react";
-import { Card, CardContent } from "../../Ui/Card.jsx";
-import { Badge } from "../../Ui/Badge.jsx";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent } from "../ui/card.jsx";
+import { Badge } from "../ui/badge.jsx";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import statsService from "../../../api/stats_Service.js";
 
-/* Datos mockeados por defecto */
-const exampleStats = [
-  { label: "Empleados activos", value: "127", change: { value: "+3%", trend: "up" }, status: "good" },
-  { label: "Turnos cubiertos", value: "89", change: { value: "-2%", trend: "down" }, status: "warning" },
-  { label: "Capacitación pendiente", value: "12", change: { value: "0%", trend: "neutral" }, status: "critical" },
-  { label: "Satisfacción", value: "4.2/5", status: "good" },
-];
+export function QuickStats() {
+  const [stats, setStats] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-export function QuickStats({ stats = exampleStats }) {
+  useEffect(() => {
+    loadStats();
+    // Recargar cada 2 minutos
+    const interval = setInterval(loadStats, 120000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      setLoading(true);
+      const data = await statsService.getResumenStats();
+      const mappedStats = statsService.mapStatsToQuickStats(data);
+      setStats(mappedStats);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+      console.error('Error cargando estadísticas:', err);
+      // Mantener las stats anteriores si falla la actualización
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getTrendIcon = (trend) => {
     switch (trend) {
@@ -46,6 +65,29 @@ export function QuickStats({ stats = exampleStats }) {
       default: return "";
     }
   };
+
+  if (loading && stats.length === 0) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i} className="bg-white border border-gray-200 rounded-lg shadow-sm animate-pulse">
+            <CardContent className="p-4">
+              <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+              <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (error && stats.length === 0) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+        <p className="text-red-600 text-sm">Error al cargar estadísticas: {error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

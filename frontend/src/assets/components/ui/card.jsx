@@ -1,6 +1,6 @@
 // Card.jsx (reemplazar por este contenido)
 import React from "react";
-import { cn } from "./utils.js";
+import { cn } from "../../../utils/utils";
 
 const Card = ({ className = "", children }) => {
   return (

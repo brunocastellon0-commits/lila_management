@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.database import get_db
-from app.services.hr_gateway_service import HRGatewayService
+from app.services.rh_service import HRGatewayService
 from app.schemas.alert import AlertaResponse
 
 router = APIRouter(

@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import { Slot } from "@radix-ui/react-slot";
 import { cva } from "class-variance-authority";
 
-import { cn } from "./utils.js";
+import { cn } from "../../../utils/utils";
 
 // Variantes de botón
 const buttonVariants = cva(

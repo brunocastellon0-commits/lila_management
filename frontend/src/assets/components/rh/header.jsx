@@ -1,9 +1,9 @@
 import React from "react";
 import { Bell, Search, Menu, Settings } from "lucide-react";
-import { Button } from "../../Ui/Button.jsx";
-import { Badge } from "../../Ui/Badge.jsx";
-import { Input } from "../../Ui/Input.jsx";
-import { Avatar, AvatarFallback, AvatarImage } from "../../Ui/Avatar.jsx";
+import { Badge } from "../ui/badge.jsx";
+import { Button } from "../ui/button.jsx";
+import { Input } from "../ui/input.jsx";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar.jsx";
 
 export function Header({
   pageTitle,

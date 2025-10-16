@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "../../Ui/Card.jsx";
-import { Button } from "../../Ui/Button.jsx";
-import { Badge } from "../../Ui/Badge.jsx";
+import { Badge } from "../ui/badge.jsx";
+import { Button } from "../ui/button.jsx";
 
 // --- Componente fila de empleado ---
 const EmpleadoFila = ({ empleado, onEditar, onEliminar }) => {

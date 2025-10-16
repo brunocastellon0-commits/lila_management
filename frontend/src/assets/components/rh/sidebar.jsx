@@ -1,8 +1,8 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Users, UserPlus, GraduationCap, Shield, Home, Settings, HelpCircle } from "lucide-react";
-import { Button } from "../../Ui/Button";
-import { Separator } from "../../Ui/Separator";
+import { Button } from "../ui/button";
+import { Separator } from "../ui/separator";
 
 /* Módulos principales */
 const mainModules = [

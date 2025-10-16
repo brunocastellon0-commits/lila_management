@@ -3,8 +3,9 @@ import {
   Users, UserPlus, GraduationCap, Heart, Shield,
   TrendingUp, TrendingDown, Minus 
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../../Ui/Card.jsx";
-import { Badge } from "../../Ui/Badge.jsx";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card.jsx";
+import { Badge } from "../ui/badge.jsx";
+
 
 export function DashboardMain({ onModuleSelect }) {
   const [quickStats, setQuickStats] = useState([]);

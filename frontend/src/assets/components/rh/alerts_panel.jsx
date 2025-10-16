@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Calendar,
   AlertTriangle,
@@ -7,26 +7,52 @@ import {
   Users,
   FileText,
 } from "lucide-react";
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "../../Ui/Card.jsx";
-import { Badge } from "../../Ui/Badge.jsx";
-import { Button } from "../../Ui/Button.jsx";
-
-/* Mock data */
-const recentActivities = [
-  { activityType: "success", activityTitle: "Nómina procesada", activityDescription: "Nómina de diciembre procesada correctamente para 127 empleados", activityTime: "Hace 2 horas", activityIcon: CheckCircle },
-  { activityType: "warning", activityTitle: "Certificado por vencer", activityDescription: "Certificado de manipulación de alimentos - Juan Pérez", activityTime: "Hace 4 horas", activityIcon: AlertTriangle },
-  { activityType: "info", activityTitle: "Nueva capacitación", activityDescription: "Curso de atención al cliente programado para el 15 de enero", activityTime: "Hace 6 horas", activityIcon: Calendar },
-  { activityType: "info", activityTitle: "Evaluación completada", activityDescription: "Evaluación de desempeño trimestral - Ana García", activityTime: "Hace 1 día", activityIcon: FileText },
-];
-
-const importantAlerts = [
-  { alertType: "warning", alertTitle: "3 certificados por vencer", alertDescription: "Renovar en los próximos 15 días", priorityLevel: "Próximo", actionButton: "Ver detalles" },
-  { alertType: "critical", alertTitle: "2 turnos sin cubrir", alertDescription: "Turno de mañana y tarde del viernes", priorityLevel: "Urgente", actionButton: "Gestionar" },
-  { alertType: "info", alertTitle: "Revisión mensual pendiente", alertDescription: "Evaluaciones de desempeño de diciembre", priorityLevel: "Info", actionButton: "Programar" },
-  { alertType: "warning", alertTitle: "Capacitación obligatoria", alertDescription: "5 empleados pendientes de completar curso de higiene", priorityLevel: "Próximo", actionButton: "Notificar" },
-];
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "../ui/card.jsx";
+import { Badge } from "../ui/badge.jsx";
+import { Button } from "../ui/button.jsx";
+import alertService from "../../../api/alert_service.js";
 
 const AlertsPanel = () => {
+  const [alertas, setAlertas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Cargar alertas al montar el componente
+  useEffect(() => {
+    loadAlertas();
+    // Recargar cada 5 minutos
+    const interval = setInterval(loadAlertas, 300000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadAlertas = async () => {
+    try {
+      setLoading(true);
+      const data = await alertService.getPendingAlerts();
+      const alertasMapeadas = alertService.mapAlertsToFrontend(data);
+      setAlertas(alertasMapeadas);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+      console.error('Error cargando alertas:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Separar alertas en importantes y actividad reciente
+  const alertasImportantes = alertas.filter(a => 
+    a.prioridad === 'Urgente' || a.prioridad === 'Alta'
+  ).slice(0, 4);
+
+  const actividadReciente = alertas.slice(0, 4).map(a => ({
+    activityType: getActivityType(a.prioridad),
+    activityTitle: a.titulo,
+    activityDescription: a.descripcion,
+    activityTime: formatFecha(a.fecha),
+    activityIcon: getIconByType(a.tipo)
+  }));
+
   const activityTypeStyles = {
     success: "bg-green-100 text-green-600",
     warning: "bg-yellow-100 text-yellow-600",
@@ -42,13 +68,32 @@ const AlertsPanel = () => {
 
   const priorityBadgeStyles = {
     Urgente: "bg-red-100 text-red-800",
-    Próximo: "bg-yellow-100 text-yellow-800",
-    Info: "bg-turquoise-100 text-turquoise-800",
+    Alta: "bg-yellow-100 text-yellow-800",
+    Media: "bg-turquoise-100 text-turquoise-800",
+    Baja: "bg-gray-100 text-gray-800",
   };
+
+  if (loading && alertas.length === 0) {
+    return (
+      <div className="flex justify-center items-center p-8">
+        <p className="text-gray-500">Cargando alertas...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8">
+        <p className="text-red-600 mb-4">Error al cargar alertas: {error}</p>
+        <Button onClick={loadAlertas} variant="outline" size="sm">
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 p-4">
-
       {/* Actividad Reciente */}
       <Card className="bg-white border border-turquoise-200 shadow-sm">
         <CardHeader className="flex justify-between items-center">
@@ -57,25 +102,34 @@ const AlertsPanel = () => {
               <Clock className="h-5 w-5" />
               Actividad Reciente
             </CardTitle>
-            <CardDescription className="text-sm text-turquoise-700">Últimas actualizaciones del sistema</CardDescription>
+            <CardDescription className="text-sm text-turquoise-700">
+              Últimas actualizaciones del sistema
+            </CardDescription>
           </div>
-          <Button variant="ghost" size="sm" className="text-turquoise-600 hover:text-turquoise-700">
-            Ver todo
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-turquoise-600 hover:text-turquoise-700"
+            onClick={loadAlertas}
+          >
+            Actualizar
           </Button>
         </CardHeader>
 
-        {/* Grid horizontal responsive */}
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {recentActivities.map((activity, index) => {
+          {actividadReciente.map((activity, index) => {
             const Icon = activity.activityIcon;
             return (
-              <div key={index} className={`flex items-start gap-3 p-3 rounded-lg ${activityTypeStyles[activity.activityType]} hover:brightness-95 transition`}>
+              <div 
+                key={index} 
+                className={`flex items-start gap-3 p-3 rounded-lg ${activityTypeStyles[activity.activityType]} hover:brightness-95 transition`}
+              >
                 <div className="p-2 rounded-full bg-current text-white flex items-center justify-center">
                   <Icon className="h-4 w-4" />
                 </div>
                 <div className="flex flex-col flex-1 min-w-0">
                   <p className="text-sm font-medium">{activity.activityTitle}</p>
-                  <p className="text-xs mt-1">{activity.activityDescription}</p>
+                  <p className="text-xs mt-1 line-clamp-2">{activity.activityDescription}</p>
                   <p className="text-xs mt-1 font-medium">{activity.activityTime}</p>
                 </div>
               </div>
@@ -91,21 +145,34 @@ const AlertsPanel = () => {
             <AlertTriangle className="h-5 w-5 text-yellow-600" />
             Alertas Importantes
           </CardTitle>
-          <Badge className="bg-yellow-100 text-yellow-800">{importantAlerts.length}</Badge>
+          <Badge className="bg-yellow-100 text-yellow-800">
+            {alertasImportantes.length}
+          </Badge>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {importantAlerts.map((alert, index) => (
-            <div key={index} className={`flex flex-col gap-2 p-4 rounded-lg border ${alertTypeStyles[alert.alertType]} hover:shadow-md transition`}>
-              <div className="flex justify-between items-start">
-                <p className="text-sm font-medium">{alert.alertTitle}</p>
-                <Badge className={`text-xs font-semibold ${priorityBadgeStyles[alert.priorityLevel]}`}>
-                  {alert.priorityLevel}
-                </Badge>
+          {alertasImportantes.length > 0 ? (
+            alertasImportantes.map((alert, index) => (
+              <div 
+                key={index} 
+                className={`flex flex-col gap-2 p-4 rounded-lg border ${alertTypeStyles[getAlertType(alert.prioridad)]} hover:shadow-md transition`}
+              >
+                <div className="flex justify-between items-start">
+                  <p className="text-sm font-medium">{alert.titulo}</p>
+                  <Badge className={`text-xs font-semibold ${priorityBadgeStyles[alert.prioridad]}`}>
+                    {alert.prioridad}
+                  </Badge>
+                </div>
+                <p className="text-xs line-clamp-2">{alert.descripcion}</p>
+                <Button variant="outline" size="sm" className="text-xs">
+                  {alert.accion}
+                </Button>
               </div>
-              <p className="text-xs">{alert.alertDescription}</p>
-              <Button variant="outline" size="sm" className="text-xs">{alert.actionButton}</Button>
+            ))
+          ) : (
+            <div className="col-span-2 text-center py-8 text-gray-500">
+              No hay alertas importantes en este momento
             </div>
-          ))}
+          )}
         </CardContent>
       </Card>
 
@@ -118,11 +185,13 @@ const AlertsPanel = () => {
             </div>
             <div className="flex flex-col flex-1">
               <h3 className="font-semibold text-turquoise-900">Estado del Personal</h3>
-              <p className="text-sm text-turquoise-700 mt-1">127 empleados activos • 89 en turno hoy</p>
+              <p className="text-sm text-turquoise-700 mt-1">
+                Información actualizada del sistema
+              </p>
               <div className="flex flex-wrap gap-4 mt-2 text-xs text-turquoise-800">
-                <span>• 95% asistencia</span>
-                <span>• 4.2/5 satisfacción</span>
-                <span>• 6 nuevas contrataciones</span>
+                <span>• {alertas.length} alertas activas</span>
+                <span>• {alertasImportantes.length} requieren atención</span>
+                <span>• Sistema operativo</span>
               </div>
             </div>
           </div>
@@ -131,5 +200,50 @@ const AlertsPanel = () => {
     </div>
   );
 };
+
+// Funciones helper
+function getActivityType(prioridad) {
+  const map = {
+    'Urgente': 'critical',
+    'Alta': 'warning',
+    'Media': 'info',
+    'Baja': 'success'
+  };
+  return map[prioridad] || 'info';
+}
+
+function getAlertType(prioridad) {
+  const map = {
+    'Urgente': 'critical',
+    'Alta': 'warning',
+    'Media': 'info',
+    'Baja': 'info'
+  };
+  return map[prioridad] || 'info';
+}
+
+function getIconByType(tipo) {
+  const icons = {
+    'request': Calendar,
+    'shift': Clock,
+    'document': FileText,
+    'training': FileText,
+    'payroll': CheckCircle
+  };
+  return icons[tipo] || AlertTriangle;
+}
+
+function formatFecha(fecha) {
+  if (!fecha) return 'Hace un momento';
+  const date = new Date(fecha);
+  const now = new Date();
+  const diffTime = Math.abs(now - date);
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) return 'Hoy';
+  if (diffDays === 1) return 'Ayer';
+  if (diffDays < 7) return `Hace ${diffDays} días`;
+  return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+}
 
 export default AlertsPanel;
