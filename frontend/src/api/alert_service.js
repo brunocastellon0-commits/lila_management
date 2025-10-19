@@ -12,7 +12,10 @@ export const alertService = {
    */
   getPendingAlerts: async () => {
     try {
-      const data = await fetchAPI('/api/rh/alertas/pendientes');
+      // ✅ CORRECCIÓN: Incluir el prefijo /rh porque config.js NO lo incluye
+      // La API_BASE_URL es http://127.0.0.1:7000/rh
+      // Pero estamos quitando ese prefijo del config para ser más flexibles
+      const data = await fetchAPI('/rh/alertas/pendientes');
       return data;
     } catch (error) {
       console.error('Error obteniendo alertas:', error);

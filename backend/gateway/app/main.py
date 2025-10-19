@@ -11,7 +11,7 @@ app = FastAPI(
     version="1.0.0",
     debug=settings.debug
 )
-USER_SERVICE_URL = "http://localhost:8000"  
+
 # Configuración de CORS
 app.add_middleware(
     CORSMiddleware,
@@ -21,8 +21,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Incluir rutas
-app.include_router(router)
+# ✅ CORRECCIÓN CRÍTICA: Incluir rutas CON el prefijo /rh
+app.include_router(router, prefix="/rh")
 
 
 @app.get("/")

@@ -10,7 +10,7 @@ export const employeeService = {
    */
   getAllEmployees: async (skip = 0, limit = 100) => {
     try {
-      const data = await fetchAPI(`/api/employees?skip=${skip}&limit=${limit}`);
+      const data = await fetchAPI(`/employees?skip=${skip}&limit=${limit}`);
       return data;
     } catch (error) {
       console.error('Error obteniendo empleados:', error);
@@ -23,7 +23,7 @@ export const employeeService = {
    */
   getEmployeeById: async (employeeId) => {
     try {
-      const data = await fetchAPI(`/api/employees/${employeeId}`);
+      const data = await fetchAPI(`/employees/${employeeId}`);
       return data;
     } catch (error) {
       console.error(`Error obteniendo empleado ${employeeId}:`, error);
@@ -36,7 +36,7 @@ export const employeeService = {
    */
   createEmployee: async (employeeData) => {
     try {
-      const data = await fetchAPI('/api/employees', {
+      const data = await fetchAPI('/employees', {
         method: 'POST',
         body: JSON.stringify(employeeData)
       });
@@ -52,7 +52,7 @@ export const employeeService = {
    */
   updateEmployee: async (employeeId, employeeData) => {
     try {
-      const data = await fetchAPI(`/api/employees/${employeeId}`, {
+      const data = await fetchAPI(`/employees/${employeeId}`, {
         method: 'PUT',
         body: JSON.stringify(employeeData)
       });
@@ -68,7 +68,7 @@ export const employeeService = {
    */
   deleteEmployee: async (employeeId) => {
     try {
-      const data = await fetchAPI(`/api/employees/${employeeId}`, {
+      const data = await fetchAPI(`/employees/${employeeId}`, {
         method: 'DELETE'
       });
       return data;
@@ -83,7 +83,7 @@ export const employeeService = {
    */
   getCargos: async () => {
     try {
-      const data = await fetchAPI('/api/cargos');
+      const data = await fetchAPI('/cargos');
       return data;
     } catch (error) {
       console.error('Error obteniendo cargos:', error);
@@ -96,7 +96,7 @@ export const employeeService = {
    */
   getSucursales: async () => {
     try {
-      const data = await fetchAPI('/api/sucursales');
+      const data = await fetchAPI('/sucursales');
       return data;
     } catch (error) {
       console.error('Error obteniendo sucursales:', error);

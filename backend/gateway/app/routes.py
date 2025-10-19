@@ -1,248 +1,508 @@
-# gateway/app/routes.py
-
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, status
+from fastapi.responses import JSONResponse
 import httpx
-from typing import Any
+from typing import Optional, Any
+
 from gateway.app.config import settings
 
 router = APIRouter()
 
-# Configuración de timeout desde settings
-TIMEOUT = httpx.Timeout(
-    settings.request_timeout, 
-    connect=settings.connect_timeout
-)
-
+# ========================================
+# FUNCIÓN CENTRAL: FORWARD REQUEST
+# ========================================
 
 async def forward_request(
     method: str,
     url: str,
-    data: dict = None,
-    headers: dict = None,
-    params: dict = None
-) -> Any:
+    data: Optional[Any] = None,
+    headers: Optional[dict] = None,
+    params: Optional[dict] = None
+) -> JSONResponse:
     """
-    Función auxiliar para hacer forwarding de requests con manejo de errores.
-    
-    Args:
-        method: Método HTTP (GET, POST, PUT, DELETE)
-        url: URL completa del servicio
-        data: Datos JSON para el body
-        headers: Headers adicionales
-        params: Query parameters
-        
-    Returns:
-        Respuesta JSON del servicio
-        
-    Raises:
-        HTTPException: Si hay errores en la comunicación
+    Reenvía una solicitud al microservicio de destino y maneja la respuesta.
     """
-    try:
-        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-            request_kwargs = {"headers": headers}
-            
-            if data is not None:
-                request_kwargs["json"] = data
-            if params is not None:
-                request_kwargs["params"] = params
-            
-            if method == "GET":
-                response = await client.get(url, **request_kwargs)
-            elif method == "POST":
-                response = await client.post(url, **request_kwargs)
-            elif method == "PUT":
-                response = await client.put(url, **request_kwargs)
-            elif method == "DELETE":
-                response = await client.delete(url, **request_kwargs)
-            elif method == "PATCH":
-                response = await client.patch(url, **request_kwargs)
-            else:
-                raise HTTPException(
-                    status_code=405, 
-                    detail=f"Método {method} no permitido"
-                )
-            
-            response.raise_for_status()
-            return response.json()
-            
-    except httpx.HTTPStatusError as e:
-        # Reenviar el error del microservicio con el detalle original
+    if headers:
+        forward_headers = {
+            k: v for k, v in headers.items()
+            if k.lower() in ["authorization", "content-type"]
+        }
+    else:
+        forward_headers = {}
+
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(settings.request_timeout, connect=settings.connect_timeout)
+    ) as client:
         try:
-            error_detail = e.response.json()
-        except:
-            error_detail = {"detail": e.response.text or "Error en el servicio"}
-        
-        raise HTTPException(
-            status_code=e.response.status_code,
-            detail=error_detail.get("detail", "Error en el servicio")
-        )
-    except httpx.TimeoutException:
-        raise HTTPException(
-            status_code=504,
-            detail="El servicio no respondió a tiempo. Intenta nuevamente."
-        )
-    except httpx.ConnectError:
-        raise HTTPException(
-            status_code=503,
-            detail="No se pudo conectar con el servicio. Verifica que esté activo."
-        )
-    except httpx.RequestError as e:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Error de conexión: {str(e)}"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error inesperado: {str(e)}"
-        )
+            response = await client.request(
+                method,
+                url,
+                json=data,
+                headers=forward_headers,
+                params=params
+            )
+
+            # ✅ CORRECCIÓN: Manejar respuestas vacías y errores de JSON
+            try:
+                content = response.json() if response.content else None
+            except Exception:
+                # Si no se puede parsear como JSON, devolver el texto plano
+                content = {"detail": response.text if response.text else "Empty response"}
+            
+            return JSONResponse(
+                content=content,
+                status_code=response.status_code,
+                headers=dict(response.headers)
+            )
+
+        except httpx.ConnectError:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Servicio no disponible: {url}"
+            )
+        except httpx.TimeoutException:
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                detail=f"Tiempo de espera agotado para el servicio: {url}"
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error interno del Gateway: {str(e)}"
+            )
 
 
 # ========================================
-# RUTAS DE AUTENTICACIÓN
+# ✅ RUTAS CONSOLIDADAS (SIN PREFIJO /rh)
+# El prefijo /rh se agrega en main.py
 # ========================================
 
-# auth
-@router.post("/auth/register")
-async def register_via_gateway(request: Request):
+# --- ESTADÍSTICAS Y ALERTAS (PRIORIDAD ALTA) ---
+
+@router.get("/stats/resumen")
+async def get_resumen_stats_via_gateway(request: Request):
+    """Obtiene el resumen de estadísticas consolidadas del sistema RH."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/alert/stats/resumen",
+        headers=dict(request.headers.items()),
+        params=request.query_params,
+    )
+
+
+@router.get("/alertas/pendientes")
+async def get_pending_alerts_via_gateway(request: Request):
+    """Obtiene todas las alertas pendientes consolidadas del sistema RH."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/alert/alertas/pendientes",
+        headers=dict(request.headers.items()),
+        params=request.query_params,
+    )
+
+
+# ========================================
+# RUTAS DE USUARIOS (USER SERVICE)
+# ========================================
+
+@router.post("/auth/register", status_code=201)
+async def register_user_via_gateway(request: Request):
+    """Reenvía la solicitud de registro al User Service."""
     data = await request.json()
     return await forward_request(
         "POST",
         f"{settings.user_service_url}/auth/register",
-        data=data
+        data=data,
+        headers=dict(request.headers.items()),
     )
 
+
 @router.post("/auth/login")
-async def login_via_gateway(request: Request):
+async def login_user_via_gateway(request: Request):
+    """Reenvía la solicitud de login al User Service."""
     data = await request.json()
     return await forward_request(
         "POST",
         f"{settings.user_service_url}/auth/login",
-        data=data
+        data=data,
+        headers=dict(request.headers.items()),
     )
 
-@router.post("/auth/refresh")
-async def refresh_token_via_gateway(request: Request):
+
+@router.get("/auth/me")
+async def get_current_user_via_gateway(request: Request):
+    """Reenvía la solicitud para obtener el usuario actual."""
+    return await forward_request(
+        "GET",
+        f"{settings.user_service_url}/auth/me",
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.get("/users/{user_id}")
+async def get_user_by_id_via_gateway(user_id: int, request: Request):
+    """Obtiene un usuario específico por ID."""
+    return await forward_request(
+        "GET",
+        f"{settings.user_service_url}/users/{user_id}",
+        headers=dict(request.headers.items()),
+    )
+
+
+# ========================================
+# RUTAS DE EMPLEADOS
+# ========================================
+
+@router.post("/employees", status_code=201)
+async def create_employee_via_gateway(request: Request):
+    """Crea un nuevo empleado."""
     data = await request.json()
     return await forward_request(
         "POST",
-        f"{settings.user_service_url}/auth/refresh",
-        data=data
+        f"{settings.rh_service_url}/employees",
+        data=data,
+        headers=dict(request.headers.items()),
     )
 
 
-
-# ========================================
-# RUTAS DE USUARIOS
-# ========================================
-
-@router.get("/users")
-async def get_users_via_gateway(
-    skip: int = 0,
-    limit: int = 100
-):
-    """Obtiene la lista de usuarios con paginación"""
+@router.get("/employees")
+async def read_all_employees_via_gateway(request: Request):
+    """Obtiene la lista paginada de todos los empleados."""
     return await forward_request(
         "GET",
-        f"{settings.user_service_url}/users",
-        params={"skip": skip, "limit": limit}
+        f"{settings.rh_service_url}/employees",
+        params=request.query_params,
+        headers=dict(request.headers.items()),
     )
 
 
-@router.get("/users/{username}")
-async def get_user_via_gateway(username: str):
-    """Obtiene un usuario específico por username"""
+@router.get("/employees/{employee_id}")
+async def read_employee_by_id_via_gateway(employee_id: int):
+    """Obtiene un empleado específico por ID."""
     return await forward_request(
         "GET",
-        f"{settings.user_service_url}/users/{username}"
+        f"{settings.rh_service_url}/employees/{employee_id}"
     )
 
 
-@router.put("/users/{user_id}")
-async def update_user_via_gateway(user_id: int, request: Request):
-    """Actualiza los datos de un usuario"""
+@router.put("/employees/{employee_id}")
+async def update_employee_via_gateway(employee_id: int, request: Request):
+    """Actualiza completamente los datos de un empleado."""
     data = await request.json()
     return await forward_request(
         "PUT",
-        f"{settings.user_service_url}/users/{user_id}",
-        data=data
+        f"{settings.rh_service_url}/employees/{employee_id}",
+        data=data,
+        headers=dict(request.headers.items()),
     )
 
 
-@router.delete("/users/{user_id}")
-async def delete_user_via_gateway(user_id: int):
-    """Elimina un usuario"""
+@router.delete("/employees/{employee_id}", status_code=204)
+async def delete_employee_via_gateway(employee_id: int, request: Request):
+    """Elimina un empleado por ID."""
     return await forward_request(
         "DELETE",
-        f"{settings.user_service_url}/users/{user_id}"
-    )
-
-
-@router.patch("/users/{user_id}/activate")
-async def activate_user_via_gateway(user_id: int):
-    """Activa un usuario"""
-    return await forward_request(
-        "PATCH",
-        f"{settings.user_service_url}/users/{user_id}/activate"
-    )
-
-
-@router.patch("/users/{user_id}/deactivate")
-async def deactivate_user_via_gateway(user_id: int):
-    """Desactiva un usuario"""
-    return await forward_request(
-        "PATCH",
-        f"{settings.user_service_url}/users/{user_id}/deactivate"
+        f"{settings.rh_service_url}/employees/{employee_id}",
+        headers=dict(request.headers.items()),
     )
 
 
 # ========================================
-# HEALTH CHECK
+# RUTAS DE DOCUMENTOS
 # ========================================
 
-@router.get("/health")
-async def health_check_services():
-    """
-    Verifica el estado de todos los microservicios
-    """
-    services_status = {}
-    
-    # Verificar User Service
-    try:
-        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-            response = await client.get(f"{settings.user_service_url}/health")
-            services_status["user_service"] = {
-                "status": "healthy" if response.status_code == 200 else "unhealthy",
-                "url": settings.user_service_url
-            }
-    except:
-        services_status["user_service"] = {
-            "status": "unreachable",
-            "url": settings.user_service_url
-        }
-    
-    # Verificar RH Service (cuando esté disponible)
-    try:
-        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-            response = await client.get(f"{settings.rh_service_url}/health")
-            services_status["rh_service"] = {
-                "status": "healthy" if response.status_code == 200 else "unhealthy",
-                "url": settings.rh_service_url
-            }
-    except:
-        services_status["rh_service"] = {
-            "status": "unreachable",
-            "url": settings.rh_service_url
-        }
-    
-    # Determinar estado general
-    all_healthy = all(
-        service["status"] == "healthy" 
-        for service in services_status.values()
+@router.post("/documents/employees/{employee_id}/documents", status_code=201)
+async def create_document_for_employee_via_gateway(employee_id: int, request: Request):
+    """Registra un nuevo documento para un empleado."""
+    data = await request.json()
+    return await forward_request(
+        "POST",
+        f"{settings.rh_service_url}/documents/employees/{employee_id}/documents",
+        data=data,
+        headers=dict(request.headers.items()),
     )
-    
-    return {
-        "gateway": "healthy",
-        "services": services_status,
-        "overall_status": "healthy" if all_healthy else "degraded"
-    }
+
+
+@router.get("/documents")
+async def read_documents_via_gateway(request: Request):
+    """Obtiene todos los documentos."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/documents",
+        params=request.query_params,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.get("/documents/{document_id}")
+async def read_document_by_id_via_gateway(document_id: int):
+    """Obtiene un documento específico por ID."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/documents/{document_id}"
+    )
+
+
+@router.put("/documents/{document_id}")
+async def update_document_via_gateway(document_id: int, request: Request):
+    """Actualiza un documento por ID."""
+    data = await request.json()
+    return await forward_request(
+        "PUT",
+        f"{settings.rh_service_url}/documents/{document_id}",
+        data=data,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.delete("/documents/{document_id}", status_code=204)
+async def delete_document_via_gateway(document_id: int, request: Request):
+    """Elimina un documento por ID."""
+    return await forward_request(
+        "DELETE",
+        f"{settings.rh_service_url}/documents/{document_id}",
+        headers=dict(request.headers.items()),
+    )
+
+
+# ========================================
+# RUTAS DE HORARIOS
+# ========================================
+
+@router.post("/schedules", status_code=201)
+async def create_schedule_via_gateway(request: Request):
+    """Crea un nuevo patrón de horario."""
+    data = await request.json()
+    return await forward_request(
+        "POST",
+        f"{settings.rh_service_url}/schedules",
+        data=data,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.get("/schedules")
+async def read_schedules_via_gateway(request: Request):
+    """Obtiene todos los horarios."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/schedules",
+        params=request.query_params,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.get("/schedules/{schedule_id}")
+async def read_schedule_by_id_via_gateway(schedule_id: int):
+    """Obtiene un horario específico por ID."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/schedules/{schedule_id}"
+    )
+
+
+@router.put("/schedules/{schedule_id}")
+async def update_schedule_via_gateway(schedule_id: int, request: Request):
+    """Actualiza un horario por ID."""
+    data = await request.json()
+    return await forward_request(
+        "PUT",
+        f"{settings.rh_service_url}/schedules/{schedule_id}",
+        data=data,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.delete("/schedules/{schedule_id}", status_code=204)
+async def delete_schedule_via_gateway(schedule_id: int, request: Request):
+    """Elimina un horario por ID."""
+    return await forward_request(
+        "DELETE",
+        f"{settings.rh_service_url}/schedules/{schedule_id}",
+        headers=dict(request.headers.items()),
+    )
+
+
+# ========================================
+# RUTAS DE SOLICITUDES (REQUEST)
+# ========================================
+
+@router.post("/request", status_code=201)
+async def create_request_via_gateway(request: Request):
+    """Crea una nueva solicitud."""
+    data = await request.json()
+    return await forward_request(
+        "POST",
+        f"{settings.rh_service_url}/request",
+        data=data,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.get("/request")
+async def read_requests_via_gateway(request: Request):
+    """Obtiene todas las solicitudes."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/request",
+        params=request.query_params,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.get("/request/{request_id}")
+async def read_request_by_id_via_gateway(request_id: int):
+    """Obtiene una solicitud específica por ID."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/request/{request_id}"
+    )
+
+
+@router.patch("/request/{request_id}")
+async def update_request_status_via_gateway(request_id: int, request: Request):
+    """Actualiza el estado de una solicitud."""
+    data = await request.json()
+    return await forward_request(
+        "PATCH",
+        f"{settings.rh_service_url}/request/{request_id}",
+        data=data,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.delete("/request/{request_id}", status_code=204)
+async def delete_request_via_gateway(request_id: int, request: Request):
+    """Elimina una solicitud por ID."""
+    return await forward_request(
+        "DELETE",
+        f"{settings.rh_service_url}/request/{request_id}",
+        headers=dict(request.headers.items()),
+    )
+
+
+# ========================================
+# RUTAS DE TURNOS (SHIFT)
+# ========================================
+
+@router.post("/shift", status_code=201)
+async def create_shift_via_gateway(request: Request):
+    """Crea un nuevo turno."""
+    data = await request.json()
+    return await forward_request(
+        "POST",
+        f"{settings.rh_service_url}/shift",
+        data=data,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.get("/shift")
+async def read_shifts_via_gateway(request: Request):
+    """Obtiene todos los turnos."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/shift",
+        params=request.query_params,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.get("/shift/{shift_id}")
+async def read_shift_by_id_via_gateway(shift_id: int):
+    """Obtiene un turno específico por ID."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/shift/{shift_id}"
+    )
+
+
+@router.put("/shift/{shift_id}")
+async def update_shift_via_gateway(shift_id: int, request: Request):
+    """Actualiza un turno por ID."""
+    data = await request.json()
+    return await forward_request(
+        "PUT",
+        f"{settings.rh_service_url}/shift/{shift_id}",
+        data=data,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.patch("/shift/{shift_id}/assign")
+async def assign_employee_to_shift_via_gateway(shift_id: int, request: Request):
+    """Asigna un empleado a un turno."""
+    data = await request.json()
+    return await forward_request(
+        "PATCH",
+        f"{settings.rh_service_url}/shift/{shift_id}/assign",
+        data=data,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.delete("/shift/{shift_id}", status_code=204)
+async def delete_shift_via_gateway(shift_id: int, request: Request):
+    """Elimina un turno por ID."""
+    return await forward_request(
+        "DELETE",
+        f"{settings.rh_service_url}/shift/{shift_id}",
+        headers=dict(request.headers.items()),
+    )
+
+
+# ========================================
+# RUTAS DE CAPACITACIÓN (TRAINING)
+# ========================================
+
+@router.post("/training", status_code=201)
+async def create_training_via_gateway(request: Request):
+    """Crea un nuevo registro de capacitación."""
+    data = await request.json()
+    return await forward_request(
+        "POST",
+        f"{settings.rh_service_url}/training",
+        data=data,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.get("/training")
+async def read_trainings_via_gateway(request: Request):
+    """Obtiene todos los registros de capacitación."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/training",
+        params=request.query_params,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.get("/training/{training_id}")
+async def read_training_by_id_via_gateway(training_id: int):
+    """Obtiene un registro de capacitación por ID."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/training/{training_id}"
+    )
+
+
+@router.put("/training/{training_id}")
+async def update_training_via_gateway(training_id: int, request: Request):
+    """Actualiza un registro de capacitación por ID."""
+    data = await request.json()
+    return await forward_request(
+        "PUT",
+        f"{settings.rh_service_url}/training/{training_id}",
+        data=data,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.delete("/training/{training_id}", status_code=204)
+async def delete_training_via_gateway(training_id: int, request: Request):
+    """Elimina un registro de capacitación por ID."""
+    return await forward_request(
+        "DELETE",
+        f"{settings.rh_service_url}/training/{training_id}",
+        headers=dict(request.headers.items()),
+    )

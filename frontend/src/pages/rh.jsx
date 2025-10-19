@@ -9,6 +9,9 @@ import AlertsPanel from "../assets/components/rh/alerts_panel.jsx";
 import { QuickStats } from "../assets/components/rh/quick_stats.jsx";
 import { RegistrarEmpleadoForm } from "../assets/components/rh/registrar_Empleado_form.jsx";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:7000";
+
+
 export default function Rrhh() {
   const [selectedModule, setSelectedModule] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);

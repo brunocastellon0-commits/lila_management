@@ -12,7 +12,8 @@ export const statsService = {
    */
   getResumenStats: async () => {
     try {
-      const data = await fetchAPI('/api/rh/stats/resumen');
+      // ✅ CORRECCIÓN: Incluir el prefijo /rh
+      const data = await fetchAPI('/rh/stats/resumen');
       return data;
     } catch (error) {
       console.error('Error obteniendo estadísticas:', error);
@@ -27,39 +28,43 @@ export const statsService = {
     return [
       {
         label: 'Total Empleados',
-        value: stats.total_activos?.toString() || '0',
+        value: stats.total_employees?.toString() || '0',
         change: {
-          value: '+3 este mes', // Puedes calcular esto del backend si envías datos históricos
-          trend: 'up'
+          value: stats.employees_added_month > 0 
+            ? `+${stats.employees_added_month} este mes` 
+            : `${stats.employees_added_month || 0} este mes`,
+          trend: stats.employees_added_month > 0 ? 'up' : 'neutral'
         },
         status: 'good'
       },
       {
         label: 'Turnos Hoy',
-        value: stats.turnos_cubiertos_hoy?.toString() || '0',
+        value: stats.shifts_today?.toString() || '0',
         change: {
-          value: `${stats.turnos_sin_cubrir || 0} pendientes`,
-          trend: stats.turnos_sin_cubrir > 0 ? 'down' : 'neutral'
+          value: `${stats.pending_shifts || 0} pendientes`,
+          trend: stats.pending_shifts > 0 ? 'down' : 'neutral'
         },
-        status: stats.turnos_sin_cubrir > 0 ? 'warning' : 'good'
+        status: stats.pending_shifts > 0 ? 'warning' : 'good'
       },
       {
         label: 'Capacitaciones',
-        value: stats.capacitaciones_activas?.toString() || '0',
+        value: stats.active_trainings?.toString() || '0',
         change: {
-          value: `${stats.capacitaciones_pendientes || 0} pendientes`,
-          trend: stats.capacitaciones_pendientes > 3 ? 'down' : 'neutral'
+          value: `${stats.expiring_trainings || 0} vencen pronto`,
+          trend: stats.expiring_trainings > 3 ? 'down' : 'neutral'
         },
-        status: stats.capacitaciones_pendientes > 3 ? 'warning' : 'good'
+        status: stats.expiring_trainings > 3 ? 'warning' : 'good'
       },
       {
         label: 'Cumplimiento',
-        value: `${stats.cumplimiento_porcentaje || 94}%`,
+        value: `${stats.compliance_rate || 94}%`,
         change: {
-          value: '+2% vs mes anterior',
-          trend: 'up'
+          value: stats.compliance_change >= 0 
+            ? `+${stats.compliance_change}% vs mes anterior` 
+            : `${stats.compliance_change}% vs mes anterior`,
+          trend: stats.compliance_change >= 0 ? 'up' : 'down'
         },
-        status: stats.cumplimiento_porcentaje >= 90 ? 'good' : 'warning'
+        status: stats.compliance_rate >= 90 ? 'good' : 'warning'
       }
     ];
   }

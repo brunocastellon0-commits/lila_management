@@ -108,7 +108,7 @@ class DocumentService:
         db.commit()
         return {"message": f"Documento con ID {document_id} eliminado exitosamente."}
 
-def get_compliance_alerts(self, db: Session, expiration_days_threshold: int = 30) -> List[Document]:
+    def get_compliance_alerts(self, db: Session, expiration_days_threshold: int = 30) -> List[Document]:
         """
         OBTIENE documentos que están a punto de vencer o que están pendientes de aprobación.
         Fuente de alertas de 'Cumplimiento'.

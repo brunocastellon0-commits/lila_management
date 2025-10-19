@@ -171,7 +171,8 @@ class ShiftService:
         db.commit()
         return {"message": f"Turno con ID {shift_id} eliminado exitosamente."}
 
-def get_uncovered_shifts_in_future(self, db: Session, days_ahead: int = 7) -> List[Shift]:
+    # ✅ CORRECCIÓN: Este método debe estar DENTRO de la clase
+    def get_uncovered_shifts_in_future(self, db: Session, days_ahead: int = 7) -> List[Shift]:
         """
         OBTIENE LOS TURNOS FUTUROS (dentro de 'days_ahead') que NO están cubiertos.
         Es la fuente de la alerta CRÍTICA de turnos sin asignar.
