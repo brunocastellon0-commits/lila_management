@@ -23,7 +23,8 @@ class EmployeeCreate(BaseModel):
     # Nota: Usamos Decimal para manejar dinero con precisión.
     tarifa_hora: Decimal | None = Field(None, decimal_places=2, description="Monto por hora de trabajo.")
     es_salario_fijo: bool = Field(default=False, description="True si recibe salario fijo mensual.")
-    
+    rol:str=Field(...,max_length=50, description="rol de empleado")
+    sucursal:str=Field(..., max_length=100, description="sucursla del empleado")
     # El desempeño es opcional y tiene un rango de validación (1 a 100).
     desempeño_score: int | None = Field(default=50, ge=1, le=100, description="Puntuación inicial de desempeño.")
     
@@ -44,6 +45,8 @@ class EmployeeUpdate(BaseModel):
     desempeño_score: int | None = None
     tarifa_hora: Decimal | None = None
     es_salario_fijo: bool | None = None
+    rol:str |None=None
+    sucursal:str|None=None
 
 # --------------------------------------------------------------------
 # 3. EmployeeResponse (Schema de Salida: GET/Lectura)

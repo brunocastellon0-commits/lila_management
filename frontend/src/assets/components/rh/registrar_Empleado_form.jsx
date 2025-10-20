@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import employeeService from "../../../api/employee_Service";
+import { toast } from "sonner"; // <--- Nueva importación para notificaciones
+import employeeService from "../../../api/employee_Service.js"; // <-- Corregido: Agregando la extensión .js
 
-export function RegistrarEmpleadoForm({ onSuccess }) {
+export function RegistrarEmpleadoForm({ onSuccess, onCancel }) { // Añadido onCancel
   const [formData, setFormData] = useState({
     nombre: "",
     apellido: "",
@@ -35,7 +36,10 @@ export function RegistrarEmpleadoForm({ onSuccess }) {
       setSucursales(sucursalesData);
     } catch (err) {
       console.error("Error cargando datos:", err);
-      alert("Error al cargar los datos iniciales: " + err.message);
+      // Reemplazo de alert() por toast.error
+      toast.error("Error al cargar los datos iniciales. Intente de nuevo.", {
+          description: err.message
+      });
     } finally {
       setLoading(false);
     }
@@ -79,6 +83,10 @@ export function RegistrarEmpleadoForm({ onSuccess }) {
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
+      // Notificar al usuario que hay campos faltantes
+      toast.warning("Por favor, complete todos los campos obligatorios.", {
+        position: "top-center"
+      });
       return;
     }
 
@@ -89,6 +97,9 @@ export function RegistrarEmpleadoForm({ onSuccess }) {
         apellido: formData.apellido,
         email: formData.email,
         puesto: formData.puesto,
+        // Usar null o undefined si no están seleccionados para evitar enviar strings vacíos
+        cargo_id: formData.cargo_id || null, 
+        sucursal_id: formData.sucursal_id || null,
         fecha_ingreso: formData.fecha_ingreso,
         tarifa_hora: formData.tarifa_hora ? parseFloat(formData.tarifa_hora) : null,
         es_salario_fijo: formData.es_salario_fijo,
@@ -96,7 +107,10 @@ export function RegistrarEmpleadoForm({ onSuccess }) {
 
       const result = await employeeService.createEmployee(payload);
 
-      alert(`Empleado registrado con éxito. ID: ${result.id}`);
+      // Reemplazo de alert() por toast.success
+      toast.success(`Empleado ${result.nombre || payload.nombre} registrado con éxito.`, {
+          description: `ID: ${result.id}`
+      });
       
       // Resetear formulario
       setFormData({
@@ -117,7 +131,10 @@ export function RegistrarEmpleadoForm({ onSuccess }) {
       }
     } catch (error) {
       console.error('Error:', error);
-      alert("Error al registrar empleado: " + error.message);
+      // Reemplazo de alert() por toast.error
+      toast.error("Error al registrar el empleado.", {
+          description: error.message || "Ocurrió un error desconocido en el servidor."
+      });
     } finally {
       setSubmitLoading(false);
     }
@@ -131,16 +148,16 @@ export function RegistrarEmpleadoForm({ onSuccess }) {
       <div className="bg-white rounded-xl p-6 w-full max-w-lg flex justify-center items-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-700 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando datos...</p>
+          <p className="text-gray-600">Cargando datos iniciales...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl p-6 w-full max-w-lg max-h-[85vh] overflow-y-auto">
-      <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-        Registrar Empleado
+    <div className="bg-white rounded-xl p-6 w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-xl">
+      <h2 className="text-2xl font-semibold text-gray-900 mb-6 border-b pb-2">
+        Registrar Nuevo Empleado
       </h2>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {/* Nombre */}
@@ -203,7 +220,7 @@ export function RegistrarEmpleadoForm({ onSuccess }) {
           {errors.puesto && <span className="text-red-500 text-xs mt-1 block">{errors.puesto}</span>}
         </div>
 
-        {/* Cargo (opcional) */}
+        {/* Cargo (opcional) - Usando Select nativo, se recomienda usar el componente de Radix si está disponible */}
         {cargos.length > 0 && (
           <div>
             <label className="text-gray-600 mb-1 block">Cargo (opcional)</label>
@@ -256,16 +273,17 @@ export function RegistrarEmpleadoForm({ onSuccess }) {
         </div>
 
         {/* Tipo de salario */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 pt-2">
           <input
             type="checkbox"
+            id="es_salario_fijo"
             name="es_salario_fijo"
             checked={formData.es_salario_fijo}
             onChange={handleChange}
             className="h-4 w-4 text-purple-700 focus:ring-purple-700 border-gray-300 rounded"
             disabled={submitLoading}
           />
-          <label className="text-gray-600">¿Es salario fijo?</label>
+          <label htmlFor="es_salario_fijo" className="text-gray-600 select-none">¿Es salario fijo?</label>
         </div>
 
         {/* Tarifa por hora (solo si no es salario fijo) */}
@@ -286,16 +304,25 @@ export function RegistrarEmpleadoForm({ onSuccess }) {
           </div>
         )}
 
-        {/* Botón submit */}
-        <button 
-          type="submit" 
-          disabled={submitLoading}
-          className="mt-4 bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg hover:bg-purple-800 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-        >
-          {submitLoading ? 'Guardando...' : 'Guardar Empleado'}
-        </button>
+        {/* Botones de acción */}
+        <div className="flex justify-end gap-3 mt-6">
+          <button 
+            type="button" 
+            onClick={onCancel} // Nuevo botón para cerrar el modal
+            className="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+            disabled={submitLoading}
+          >
+            Cancelar
+          </button>
+          <button 
+            type="submit" 
+            disabled={submitLoading}
+            className="bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg hover:bg-purple-800 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {submitLoading ? 'Guardando...' : 'Guardar Empleado'}
+          </button>
+        </div>
       </form>
     </div>
   );
 }
-    

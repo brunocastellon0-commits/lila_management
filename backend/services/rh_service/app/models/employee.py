@@ -28,7 +28,13 @@ class Employee(Base):
     fecha_ingreso = Column(Date, nullable=False, default=func.curdate())
     is_active = Column(Boolean, default=True)  # Usado para el dashboard de Empleados Activos.
     desempeño_score = Column(Integer, default=50) # Usado para métricas de Cumplimiento/Desempeño.
-
+    
+    
+    sucursal_id= Column(Integer, ForeignKey('sucursal.id' ), nullable= True)
+    rol_id= Column(Integer,ForeignKey('roles.id'), nullable=False)
+    
+    
+    
     # --- Relaciones ORM (Mappings) ---
     schedules = relationship("EmployeeSchedule", back_populates="employee", 
                              doc="Patrones de horario base asignados al empleado.")
@@ -47,7 +53,9 @@ class Employee(Base):
     
     payments = relationship("PaymentDetail", back_populates="employee", 
                              doc="Detalles de pago asociados a un período de nómina.")
+    rol = relationship("Employee", back_populates="role")
 
+    sucursal= relationship("Sucursal", back_populates="employee")
     def __repr__(self):
         """Representación para la depuración."""
         return f"<Employee(id={self.id}, nombre='{self.nombre} {self.apellido}')>"

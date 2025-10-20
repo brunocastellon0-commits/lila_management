@@ -29,6 +29,8 @@ from app.models import pay_component
 from app.models import request
 from app.models import shift
 from app.models import training
+from app.models import sucursal
+from app.models import role
 # NOTA: Ajusta estas líneas si tus modelos están en otro lugar.
 # --------------------------------------------------------------------------
 

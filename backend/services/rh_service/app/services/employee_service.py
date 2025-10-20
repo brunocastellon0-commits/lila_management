@@ -9,7 +9,7 @@ from typing import List
 from app.models.employee import Employee
 from app.schemas.schema_employee import EmployeeCreate, EmployeeUpdate
 
-class EmployeeService:
+class EmployeeService: 
     """
     Contiene la lógica de negocio para las operaciones CRUD 
     sobre el modelo Employee.
@@ -45,7 +45,10 @@ class EmployeeService:
             fecha_ingreso=employee.fecha_ingreso,
             # Campos de nómina
             tarifa_hora=employee.tarifa_hora,
-            es_salario_fijo=employee.es_salario_fijo
+            es_salario_fijo=employee.es_salario_fijo,
+            role=employee.rol,
+            sucursal=employee.sucursal
+            
         )
         
         try:

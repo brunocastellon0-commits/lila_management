@@ -12,7 +12,8 @@ from app.api import shift_router
 from app.api import training_router 
 # NUEVO: Importamos el router de HR Gateway para estadísticas y alertas
 from app.api import alert_router
-
+from app.api import role_router
+from app.api import sucursal_router
 # El router principal
 api_router = APIRouter()
 
@@ -54,3 +55,11 @@ api_router.include_router(
     prefix="/alert", 
     tags=["Alertas"]
 )
+
+#11 Ruta para roles
+
+api_router.include_router(role_router.router, tags=["Roles"], prefis="/roles")
+
+#11 Ruta para roles
+
+api_router.include_router(sucursal_router.router, tags=["Sucursal"], prefis="/sucursal")

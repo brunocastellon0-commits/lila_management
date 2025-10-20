@@ -23,7 +23,7 @@ function App() {
         
         {/* Por lo general, el panel de RH debe estar protegido. 
             Aquí solo establecemos la ruta. */}
-        <Route path="/rh" element={<Rh />} />
+        <Route path="/rh/*" element={<Rh />} />
         
         {/* Opcional: Ruta para manejar URLs no encontradas (404) */}
         {/* <Route path="*" element={<div>404 - Página no encontrada</div>} /> */}
