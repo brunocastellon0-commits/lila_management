@@ -51,6 +51,7 @@ export function Sidebar({ onModuleSelect, activeModule = "dashboard" }) {
               <Button
                 key={item.id}
                 variant={isActive ? "default" : "ghost"}
+                // CORRECCIÓN CLAVE: Uso de backticks (``)
                 className={`w-full justify-start gap-3 h-11 text-sm rounded-md transition-all duration-200 ${
                   isActive
                     ? "bg-teal-500 text-white shadow-md hover:bg-teal-600"
@@ -78,6 +79,7 @@ export function Sidebar({ onModuleSelect, activeModule = "dashboard" }) {
               <Button
                 key={item.id}
                 variant="ghost"
+                // CORRECCIÓN CLAVE: Uso de backticks (``)
                 className={`w-full justify-start gap-3 h-11 text-sm rounded-md transition-all duration-200 ${
                   isActive
                     ? "bg-gray-100 text-gray-900"

@@ -14,7 +14,6 @@ export function Header({
 }) {
   return (
     <header className="flex items-center justify-between h-20 px-6 bg-teal-50 border-b border-teal-200 shadow-sm relative z-20 flex-shrink-0 transition-all duration-300 hover:shadow-md">
-      
       {/* Bloque izquierdo: Menú + título */}
       <div className="flex items-center gap-4">
         <Button
@@ -40,7 +39,6 @@ export function Header({
 
       {/* Bloque derecho: buscador + acciones + perfil */}
       <div className="flex items-center gap-4 flex-1 justify-end">
-        
         {/* Buscador (solo desktop) */}
         <div className="hidden md:flex relative items-center w-[500px] h-10 bg-teal-50 border border-teal-200 rounded-md focus-within:ring-1 focus-within:ring-teal-400 transition-all">
           {/* Lupa */}
@@ -48,7 +46,7 @@ export function Header({
 
           {/* Input */}
           <Input
-            placeholder="   Buscar empleados, reportes..."
+            placeholder="Buscar empleados, reportes..."
             className="flex-1 h-full text-sm text-teal-800 bg-transparent border-none pl-10 pr-3 focus:outline-none"
           />
         </div>

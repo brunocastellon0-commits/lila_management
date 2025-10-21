@@ -53,9 +53,9 @@ class Employee(Base):
     
     payments = relationship("PaymentDetail", back_populates="employee", 
                              doc="Detalles de pago asociados a un período de nómina.")
-    rol = relationship("Employee", back_populates="role")
+    rol = relationship("Role", back_populates="employees")
 
-    sucursal= relationship("Sucursal", back_populates="employee")
+    sucursal= relationship("Sucursal", back_populates="employees")
     def __repr__(self):
         """Representación para la depuración."""
         return f"<Employee(id={self.id}, nombre='{self.nombre} {self.apellido}')>"

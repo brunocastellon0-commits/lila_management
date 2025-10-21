@@ -11,11 +11,12 @@ from app.database import get_db
 from app.services.employee_service import EmployeeService
 from app.schemas.schema_employee import EmployeeCreate, EmployeeUpdate, EmployeeResponse
 
-# Inicialización del router
-router = APIRouter()
+# ✅ SOLUCIÓN: Deshabilitar trailing slash redirect
+router = APIRouter(redirect_slashes=False)
 
+# ✅ CRÍTICO: Rutas SIN barra final
 @router.post(
-    "/", 
+    "", 
     response_model=EmployeeResponse, 
     status_code=status.HTTP_201_CREATED,
     summary="Crea un nuevo empleado"
@@ -34,14 +35,13 @@ def create_employee_route(
         db_employee = service.create_employee(db=db, employee=employee_in)
         return db_employee
     except IntegrityError:
-        # Esto captura errores de unicidad, como el email duplicado
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="El correo electrónico proporcionado ya está registrado."
         )
 
 @router.get(
-    "/", 
+    "", 
     response_model=List[EmployeeResponse],
     summary="Obtiene todos los empleados"
 )
@@ -146,4 +146,5 @@ def delete_employee_route(
         
     # 2. Eliminar
     service.delete_employee(db=db, db_employee=db_employee)
-    return {"ok": True}
+    # ✅ CORREGIDO: No devolver nada en 204
+    return None

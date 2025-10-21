@@ -1,6 +1,6 @@
 # rh_service/app/services/employee_service.py
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session,joinedload
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 from typing import List
@@ -27,17 +27,22 @@ class EmployeeService:
         return employee
 
     def get_all_employees(self, db: Session, skip: int = 0, limit: int = 100) -> List[Employee]:
-        """
-        Obtiene una lista paginada de todos los empleados.
-        """
-        return db.query(Employee).offset(skip).limit(limit).all()
-
+        return db.query(Employee)\
+            .options(
+                joinedload(Employee.rol),
+                joinedload(Employee.sucursal)
+            )\
+            .offset(skip)\
+            .limit(limit)\
+            .all()
     def create_employee(self, db: Session, employee: EmployeeCreate) -> Employee:
-        """
-        Crea un nuevo registro de empleado en la base de datos.
-        Maneja errores de duplicación de email (IntegrityError).
-        """
-        db_employee = Employee(
+         """
+         Crea un nuevo registro de empleado en la base de datos.
+         Maneja errores de duplicación de email (IntegrityError).
+         """
+         # FIX: Se cambiaron 'role' y 'sucursal' por los nombres de las columnas de clave foránea
+         # ('rol_id' y 'sucursal_id') para evitar el TypeError de SQLAlchemy.
+         db_employee = Employee(
             nombre=employee.nombre,
             apellido=employee.apellido,
             email=employee.email,
@@ -46,25 +51,27 @@ class EmployeeService:
             # Campos de nómina
             tarifa_hora=employee.tarifa_hora,
             es_salario_fijo=employee.es_salario_fijo,
-            role=employee.rol,
-            sucursal=employee.sucursal
-            
-        )
-        
-        try:
+    
+            # --- CAMBIOS APLICADOS ---
+            rol_id=employee.rol_id,
+            sucursal_id=employee.sucursal_id
+    
+         )
+    
+         try:
             db.add(db_employee)
             db.commit()
             db.refresh(db_employee)
             return db_employee
-        except IntegrityError:
+         except IntegrityError:
             db.rollback()
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
-                                detail="El correo electrónico ya está registrado.")
-        except Exception:
+                            detail="El correo electrónico ya está registrado.")
+         except Exception as e:
             db.rollback()
+            # MODIFICACIÓN CLAVE: Incluir el mensaje de error de la base de datos (e)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-                                detail="Error desconocido al crear empleado.")
-
+                            detail=f"Error interno al crear empleado (BD): {e}")
 
     def update_employee(self, db: Session, employee_id: int, employee_update: EmployeeUpdate) -> Employee:
         """

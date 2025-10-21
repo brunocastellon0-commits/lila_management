@@ -58,8 +58,8 @@ api_router.include_router(
 
 #11 Ruta para roles
 
-api_router.include_router(role_router.router, tags=["Roles"], prefis="/roles")
+api_router.include_router(role_router.router, tags=["Roles"], prefix="/roles")
 
 #11 Ruta para roles
 
-api_router.include_router(sucursal_router.router, tags=["Sucursal"], prefis="/sucursal")
+api_router.include_router(sucursal_router.router, tags=["Sucursal"], prefix="/sucursal")

@@ -11,7 +11,7 @@ export function QuickStats() {
 
   useEffect(() => {
     loadStats();
-    // Recargar cada 2 minutos
+    // Recargar cada 2 minutos (120000 ms)
     const interval = setInterval(loadStats, 120000);
     return () => clearInterval(interval);
   }, []);

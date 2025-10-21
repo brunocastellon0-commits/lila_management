@@ -36,7 +36,7 @@ def read_all_roles_route(
     roles=service.get_all_roles(db,skip=skip,limit=limit)
     return roles 
 
-@router.get("/{rol_id}", response_model=RoleResponse, sumarry="Rol por id")
+@router.get("/{rol_id}", response_model=RoleResponse, summary="Rol por id")
 def read_roles_route(
     role_id:int,
     db:Session=Depends(get_db)

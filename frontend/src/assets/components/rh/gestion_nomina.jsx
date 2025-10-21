@@ -1,413 +1,470 @@
 import { useState, useEffect } from "react";
-import { RegistrarEmpleadoForm } from "../rh/registrar_Empleado_form";
+import { RegistrarEmpleadoForm } from "./registrar_Empleado_form";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { toast } from "sonner";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "../ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "../ui/table";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "../ui/alert_dialog";
 import { Badge } from "../ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Search, Plus, Edit, Eye, Trash2, Users, UserCheck, UserX } from "lucide-react";
+import { Search, Plus, Edit, Eye, Trash2, Users, UserCheck, UserX, Loader2 } from "lucide-react";
 import { Toaster } from "../ui/sonner";
-
+import employeeService from "../../../api/employee_Service";
 
 export default function GestionNominaContent() {
-  const [employees, setEmployees] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterCargo, setFilterCargo] = useState("todos");
-  const [filterSucursal, setFilterSucursal] = useState("todos");
-  const [filterEstado, setFilterEstado] = useState("todos");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [employeeToDelete, setEmployeeToDelete] = useState(null);
+  const [employees, setEmployees] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterPuesto, setFilterPuesto] = useState("todos");
+  const [filterSucursal, setFilterSucursal] = useState("todos");
+  const [filterEstado, setFilterEstado] = useState("todos");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // TODO: Integrar con backend para obtener empleados
-  useEffect(() => {
-    // Datos de ejemplo para pruebas
-    const mockEmployees = [
-      {
-        id: 1,
-        nombre: "Juan",
-        apellido: "Pérez",
-        nombreCompleto: "Juan Pérez",
-        ci: "12345678",
-        cargo: "Chef",
-        sucursal: "Centro",
-        fechaIngreso: "2024-01-15",
-        estado: "activo",
-        foto: null,
-      },
-      {
-        id: 2,
-        nombre: "María",
-        apellido: "García",
-        nombreCompleto: "María García",
-        ci: "87654321",
-        cargo: "Mesero",
-        sucursal: "Zona Norte",
-        fechaIngreso: "2024-02-20",
-        estado: "activo",
-        foto: null,
-      },
-      {
-        id: 3,
-        nombre: "Carlos",
-        apellido: "López",
-        nombreCompleto: "Carlos López",
-        ci: "45678912",
-        cargo: "Cajero",
-        sucursal: "Centro",
-        fechaIngreso: "2023-11-10",
-        estado: "inactivo",
-        foto: null,
-      },
-    ];
-    
-    setEmployees(mockEmployees);
+  // Cargar empleados desde el backend
+  useEffect(() => {
+    loadEmployees();
+  }, [refreshTrigger]);
 
-    // Descomentar cuando tengas el backend
-    // fetch("/api/empleados")
-    //   .then(res => res.json())
-    //   .then(data => setEmployees(data))
-    //   .catch(err => console.error(err));
-  }, []);
+  const loadEmployees = async () => {
+    setLoading(true);
+    try {
+      const data = await employeeService.getAllEmployees();
+      setEmployees(data);
+    } catch (error) {
+      console.error("Error cargando empleados:", error);
+      toast.error("Error al cargar los empleados", {
+        description: error.message || "No se pudo conectar con el servidor"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Filtrar empleados
-  const filteredEmployees = employees.filter((emp) => {
-    const matchesSearch =
-      emp.nombreCompleto?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.ci?.includes(searchTerm);
-    const matchesCargo = filterCargo === "todos" || emp.cargo?.toLowerCase() === filterCargo;
-    const matchesSucursal = filterSucursal === "todos" || emp.sucursal === filterSucursal;
-    const matchesEstado = filterEstado === "todos" || emp.estado === filterEstado;
+  // Filtrar empleados
+  const filteredEmployees = employees.filter((emp) => {
+    // CORREGIDO: Usar comillas invertidas (backticks)
+    const nombreCompleto = `${emp.nombre} ${emp.apellido}`.toLowerCase();
+    const matchesSearch =
+      nombreCompleto.includes(searchTerm.toLowerCase()) ||
+      emp.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesPuesto = filterPuesto === "todos" || emp.puesto?.toLowerCase() === filterPuesto.toLowerCase();
+    const matchesSucursal = filterSucursal === "todos" || emp.sucursal?.nombre_sucursal === filterSucursal;
+    const matchesEstado = filterEstado === "todos" || 
+      (filterEstado === "activo" ? emp.is_active : !emp.is_active);
 
-    return matchesSearch && matchesCargo && matchesSucursal && matchesEstado;
-  });
+    return matchesSearch && matchesPuesto && matchesSucursal && matchesEstado;
+  });
 
-  const activeCount = employees.filter((emp) => emp.estado === "activo").length;
-  const inactiveCount = employees.filter((emp) => emp.estado === "inactivo").length;
+  const activeCount = employees.filter((emp) => emp.is_active).length;
+  const inactiveCount = employees.filter((emp) => !emp.is_active).length;
 
-  const handleNewEmployee = () => {
-    setSelectedEmployee(null);
-    setIsModalOpen(true);
-  };
+  // Obtener listas únicas para los filtros
+  const uniquePuestos = [...new Set(employees.map(emp => emp.puesto).filter(Boolean))];
+  const uniqueSucursales = [...new Set(employees.map(emp => emp.sucursal?.nombre_sucursal).filter(Boolean))];
 
-  const handleEditEmployee = (employee) => {
-    setSelectedEmployee(employee);
-    setIsModalOpen(true);
-  };
+  const handleNewEmployee = () => {
+    setSelectedEmployee(null);
+    setIsModalOpen(true);
+  };
 
-  const handleSaveEmployee = (data) => {
-    // El formulario ya maneja el guardado con el backend
-    // Solo necesitamos agregar a la lista local si tiene éxito
-    const newEmployee = {
-      id: employees.length + 1,
-      nombre: data.nombre,
-      apellido: data.apellido,
-      nombreCompleto: `${data.nombre} ${data.apellido}`,
-      ci: data.ci || "N/A",
-      cargo: data.puesto,
-      sucursal: data.sucursal_id || "N/A",
-      fechaIngreso: data.fecha_ingreso,
-      estado: "activo",
-      foto: null,
-    };
-    setEmployees([...employees, newEmployee]);
-    setIsModalOpen(false);
-  };
+  const handleEditEmployee = (employee) => {
+    setSelectedEmployee(employee);
+    setIsModalOpen(true);
+  };
 
-  const handleDeleteClick = (id) => {
-    setEmployeeToDelete(id);
-    setDeleteDialogOpen(true);
-  };
+  const handleSaveEmployee = async (data) => {
+    try {
+      if (selectedEmployee) {
+        // Actualizar empleado existente
+        await employeeService.updateEmployee(selectedEmployee.id, data);
+        toast.success("Empleado actualizado correctamente");
+      } else {
+        // Crear nuevo empleado
+        await employeeService.createEmployee(data);
+        toast.success("Empleado registrado correctamente");
+      }
+      
+      setIsModalOpen(false);
+      setRefreshTrigger(prev => prev + 1); // Recargar la lista
+    } catch (error) {
+      console.error('Error guardando empleado:', error);
+      toast.error("Error al guardar el empleado", {
+        description: error.message
+      });
+    }
+  };
 
-  const handleConfirmDelete = () => {
-    // TODO: Integrar con backend DELETE
-    if (employeeToDelete) {
-      setEmployees(employees.filter((emp) => emp.id !== employeeToDelete));
-      toast.success("Empleado eliminado correctamente");
-      setDeleteDialogOpen(false);
-      setEmployeeToDelete(null);
-    }
-  };
+  const handleDeleteClick = (employee) => {
+    setEmployeeToDelete(employee);
+    setDeleteDialogOpen(true);
+  };
 
-  const handleViewEmployee = (employee) => {
-    toast.info(`Ver detalles de ${employee.nombreCompleto}`);
-  };
+  const handleConfirmDelete = async () => {
+    if (employeeToDelete) {
+      try {
+        await employeeService.deleteEmployee(employeeToDelete.id);
+        toast.success("Empleado eliminado correctamente");
+        setDeleteDialogOpen(false);
+        setEmployeeToDelete(null);
+        setRefreshTrigger(prev => prev + 1); // Recargar la lista
+      } catch (error) {
+        console.error('Error eliminando empleado:', error);
+        toast.error("Error al eliminar el empleado", {
+          description: error.message
+        });
+      }
+    }
+  };
 
-  return (
-    <div className="p-8">
-      {/* Encabezado */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Gestión de Empleados</h1>
-            <p className="text-gray-600">Administra la información del personal de tu restaurante</p>
-          </div>
-          <Button onClick={handleNewEmployee} className="bg-emerald-600 hover:bg-emerald-700">
-            <Plus className="w-4 h-4 mr-2" /> Nuevo empleado
-          </Button>
-        </div>
+  const handleViewEmployee = (employee) => {
+    // CORREGIDO: Usar comillas invertidas (backticks)
+    toast.info(`Ver detalles de ${employee.nombre} ${employee.apellido}`);
+  };
 
-        {/* Indicadores */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-3">
-            <div className="p-3 bg-emerald-50 rounded-lg">
-              <Users className="w-6 h-6 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Total Empleados</p>
-              <p className="text-2xl font-bold text-gray-900">{employees.length}</p>
-            </div>
-          </div>
+  // Pantalla de carga
+  if (loading) {
+    return (
+      <div className="p-8 bg-gradient-to-br from-slate-50 via-white to-teal-50/30 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative inline-flex items-center justify-center mb-6">
+            <div className="animate-spin rounded-full h-20 w-20 border-4 border-slate-200"></div>
+            <div className="animate-spin rounded-full h-20 w-20 border-4 border-t-teal-500 absolute"></div>
+          </div>
+          <p className="text-slate-600 font-semibold text-xl">Cargando empleados...</p>
+          <p className="text-slate-400 text-sm mt-2">Por favor espere un momento</p>
+        </div>
+      </div>
+    );
+  }
 
-          <div className="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-3">
-            <div className="p-3 bg-green-50 rounded-lg">
-              <UserCheck className="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Activos</p>
-              <p className="text-2xl font-bold text-gray-900">{activeCount}</p>
-            </div>
-          </div>
+  return (
+    <div className="p-8 bg-gradient-to-br from-slate-50 via-white to-teal-50/30 min-h-screen">
+      {/* Encabezado */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2 tracking-tight">
+              Gestión de Empleados
+            </h1>
+            <p className="text-slate-600 font-medium">
+              Administra la información del personal de tu restaurante
+            </p>
+          </div>
+          <Button 
+            onClick={handleNewEmployee} 
+            className="bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white shadow-lg shadow-teal-500/30 hover:shadow-xl hover:shadow-teal-500/40 transition-all duration-300 font-semibold px-6 py-2.5 rounded-xl border border-teal-400/20"
+          >
+            <Plus className="w-4 h-4 mr-2" /> 
+            Nuevo Empleado
+          </Button>
+        </div>
+        
+        {/* Indicadores */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="group bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm hover:shadow-xl hover:border-teal-200 transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center gap-4">
+              <div className="p-3.5 bg-gradient-to-br from-slate-100 to-slate-50 rounded-xl group-hover:from-teal-50 group-hover:to-teal-100/50 transition-all duration-300 border border-slate-200/50">
+                <Users className="w-7 h-7 text-slate-700 group-hover:text-teal-600 transition-colors duration-300" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-600 mb-1">Total Empleados</p>
+                <p className="text-3xl font-bold text-slate-900">{employees.length}</p>
+              </div>
+            </div>
+          </div>
 
-          <div className="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-3">
-            <div className="p-3 bg-red-50 rounded-lg">
-              <UserX className="w-6 h-6 text-red-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Inactivos</p>
-              <p className="text-2xl font-bold text-gray-900">{inactiveCount}</p>
-            </div>
-          </div>
-        </div>
+          <div className="group bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm hover:shadow-xl hover:border-emerald-200 transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center gap-4">
+              <div className="p-3.5 bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl group-hover:shadow-md group-hover:shadow-emerald-200/50 transition-all duration-300 border border-emerald-200/50">
+                <UserCheck className="w-7 h-7 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-600 mb-1">Activos</p>
+                <p className="text-3xl font-bold text-slate-900">{activeCount}</p>
+              </div>
+            </div>
+          </div>
 
-        {/* Filtros */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="grid grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Buscar por nombre o CI..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+          <div className="group bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm hover:shadow-xl hover:border-rose-200 transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center gap-4">
+              <div className="p-3.5 bg-gradient-to-br from-rose-50 to-rose-100/50 rounded-xl group-hover:shadow-md group-hover:shadow-rose-200/50 transition-all duration-300 border border-rose-200/50">
+                <UserX className="w-7 h-7 text-rose-600" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-600 mb-1">Inactivos</p>
+                <p className="text-3xl font-bold text-slate-900">{inactiveCount}</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
-            <Select value={filterCargo} onValueChange={setFilterCargo}>
-              <SelectTrigger>
-                <SelectValue placeholder="Cargo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos los cargos</SelectItem>
-                <SelectItem value="gerente">Gerente</SelectItem>
-                <SelectItem value="chef">Chef</SelectItem>
-                <SelectItem value="cocinero">Cocinero</SelectItem>
-                <SelectItem value="mesero">Mesero</SelectItem>
-                <SelectItem value="cajero">Cajero</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* Filtros */}
+        <div className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <Input
+                type="text"
+                placeholder="Buscar por nombre o email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-slate-50/50 border-slate-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all duration-200 rounded-xl h-11 font-medium text-slate-700 placeholder:text-slate-400"
+              />
+            </div>
 
-            <Select value={filterSucursal} onValueChange={setFilterSucursal}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sucursal" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todas las sucursales</SelectItem>
-                <SelectItem value="Centro">Centro</SelectItem>
-                <SelectItem value="Zona Norte">Zona Norte</SelectItem>
-                <SelectItem value="Zona Sur">Zona Sur</SelectItem>
-                <SelectItem value="Centro Comercial">Centro Comercial</SelectItem>
-              </SelectContent>
-            </Select>
+            <Select value={filterPuesto} onValueChange={setFilterPuesto}>
+              <SelectTrigger className="bg-slate-50/50 border-slate-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all duration-200 rounded-xl h-11 font-medium text-slate-700">
+                <SelectValue placeholder="Puesto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los puestos</SelectItem>
+                {uniquePuestos.map((puesto) => (
+                  <SelectItem key={puesto} value={puesto}>{puesto}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            <Select value={filterEstado} onValueChange={setFilterEstado}>
-              <SelectTrigger>
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos los estados</SelectItem>
-                <SelectItem value="activo">Activo</SelectItem>
-                <SelectItem value="inactivo">Inactivo</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
+            <Select value={filterSucursal} onValueChange={setFilterSucursal}>
+              <SelectTrigger className="bg-slate-50/50 border-slate-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all duration-200 rounded-xl h-11 font-medium text-slate-700">
+                <SelectValue placeholder="Sucursal" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todas las sucursales</SelectItem>
+                {uniqueSucursales.map((sucursal) => (
+                  <SelectItem key={sucursal} value={sucursal}>{sucursal}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-      {/* Tabla */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-gray-50">
-              <TableHead>Foto</TableHead>
-              <TableHead>Nombre Completo</TableHead>
-              <TableHead>Cargo</TableHead>
-              <TableHead>Sucursal</TableHead>
-              <TableHead>Fecha de Ingreso</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredEmployees.map((employee) => (
-              <TableRow key={employee.id} className="hover:bg-gray-50">
-                <TableCell>
-                  <Avatar>
-                    <AvatarImage src={employee.foto} alt={employee.nombreCompleto} />
-                    <AvatarFallback>
-                      {employee.nombre?.[0]}{employee.apellido?.[0]}
-                    </AvatarFallback>
-                  </Avatar>
+            <Select value={filterEstado} onValueChange={setFilterEstado}>
+              <SelectTrigger className="bg-slate-50/50 border-slate-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all duration-200 rounded-xl h-11 font-medium text-slate-700">
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los estados</SelectItem>
+                <SelectItem value="activo">Activo</SelectItem>
+                <SelectItem value="inactivo">Inactivo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla */}
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-gradient-to-r from-slate-50 to-teal-50/30 hover:from-slate-50 hover:to-teal-50/30 border-b border-slate-200">
+              <TableHead className="font-bold text-slate-800 text-xs uppercase tracking-wider">Foto</TableHead>
+              <TableHead className="font-bold text-slate-800 text-xs uppercase tracking-wider">Nombre Completo</TableHead>
+              <TableHead className="font-bold text-slate-800 text-xs uppercase tracking-wider">Puesto</TableHead>
+              <TableHead className="font-bold text-slate-800 text-xs uppercase tracking-wider">Rol</TableHead>
+              <TableHead className="font-bold text-slate-800 text-xs uppercase tracking-wider">Sucursal</TableHead>
+              <TableHead className="font-bold text-slate-800 text-xs uppercase tracking-wider">Fecha de Ingreso</TableHead>
+              <TableHead className="font-bold text-slate-800 text-xs uppercase tracking-wider">Estado</TableHead>
+              <TableHead className="text-right font-bold text-slate-800 text-xs uppercase tracking-wider">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredEmployees.map((employee) => (
+              <TableRow key={employee.id} className="hover:bg-teal-50/30 border-slate-100 transition-colors duration-150">
+                <TableCell className="py-4">
+                  <Avatar className="w-11 h-11 border-2 border-teal-100 shadow-sm">
+                    {/* CORREGIDO: Usar comillas invertidas (backticks) */}
+                    <AvatarImage src={employee.foto} alt={`${employee.nombre} ${employee.apellido}`} />
+                    <AvatarFallback className="bg-gradient-to-br from-teal-100 to-teal-50 text-teal-700 font-bold text-sm">
+                      {employee.nombre?.[0]}{employee.apellido?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                </TableCell>
+                <TableCell className="py-4">
+                  <div>
+                    <p className="font-bold text-slate-900">{employee.nombre} {employee.apellido}</p>
+                    <p className="text-sm text-slate-500 font-medium">{employee.email}</p>
+                  </div>
+                </TableCell>
+                <TableCell className="font-semibold text-slate-700 py-4">{employee.puesto}</TableCell>
+                <TableCell className="font-semibold text-slate-700 py-4">
+                {employee.role?.rol || employee.rol?.rol}
                 </TableCell>
-                <TableCell>
-                  <div>
-                    <p className="font-medium">{employee.nombreCompleto}</p>
-                    <p className="text-sm text-gray-500">CI: {employee.ci}</p>
-                  </div>
+                <TableCell className="font-semibold text-slate-700 py-4">
+                {employee.sucursal?.nombre_sucursal}
                 </TableCell>
-                <TableCell>{employee.cargo}</TableCell>
-                <TableCell>{employee.sucursal}</TableCell>
-                <TableCell>
-                  {employee.fechaIngreso &&
-                    new Date(employee.fechaIngreso).toLocaleDateString("es-ES", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={employee.estado === "activo" ? "default" : "secondary"}
-                    className={
-                      employee.estado === "activo"
-                        ? "bg-green-100 text-green-700 hover:bg-green-100"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-100"
-                    }
-                  >
-                    {employee.estado === "activo" ? "Activo" : "Inactivo"}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleViewEmployee(employee)}
-                      className="hover:bg-blue-50 hover:text-blue-600"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEditEmployee(employee)}
-                      className="hover:bg-emerald-50 hover:text-emerald-600"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteClick(employee.id)}
-                      className="hover:bg-red-50 hover:text-red-600"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                <TableCell className="font-semibold text-slate-700 py-4">
+                  {employee.fecha_ingreso &&
+                    new Date(employee.fecha_ingreso).toLocaleDateString("es-ES", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                </TableCell>
+                <TableCell className="py-4">
+                  <Badge
+                    variant={employee.is_active ? "default" : "secondary"}
+                    className={
+                      employee.is_active
+                        ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 font-bold border border-emerald-200 px-3 py-1.5 rounded-lg shadow-sm"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-100 font-bold border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm"
+                    }
+                  >
+                    {employee.is_active ? "Activo" : "Inactivo"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="py-4">
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleViewEmployee(employee)}
+                      className="hover:bg-teal-50 hover:text-teal-700 text-slate-500 transition-all duration-200 rounded-lg"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEditEmployee(employee)}
+                      className="hover:bg-blue-50 hover:text-blue-700 text-slate-500 transition-all duration-200 rounded-lg"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteClick(employee)}
+                      className="hover:bg-rose-50 hover:text-rose-700 text-slate-500 transition-all duration-200 rounded-lg"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
 
-        {filteredEmployees.length === 0 && (
-          <div className="text-center py-12">
-            <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No se encontraron empleados</p>
-            <p className="text-sm text-gray-400">Intenta ajustar los filtros de búsqueda</p>
-          </div>
-        )}
-      </div>
+        {filteredEmployees.length === 0 && (
+          <div className="text-center py-16">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
+              <Users className="w-8 h-8 text-slate-400" />
+            </div>
+            <p className="text-lg font-bold text-slate-700 mb-1">No se encontraron empleados</p>
+            <p className="text-sm text-slate-500 font-medium">
+              {employees.length === 0 
+                ? "Comienza agregando tu primer empleado"
+                : "Intenta ajustar los filtros de búsqueda"}
+            </p>
+          </div>
+        )}
 
-      {/* Modal de Registrar Empleado */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Overlay oscuro */}
-          <div
-            className="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-300"
-            onClick={() => setIsModalOpen(false)}
-          ></div>
+        {/* Paginación */}
+        {filteredEmployees.length > 0 && (
+          <div className="border-t border-slate-200 px-6 py-5 flex items-center justify-between bg-slate-50/50">
+            <p className="text-sm font-semibold text-slate-600">
+              Mostrando <span className="text-teal-600">{filteredEmployees.length}</span> de <span className="text-teal-600">{employees.length}</span> empleados
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" disabled className="text-slate-500 border-slate-200 rounded-lg font-semibold">
+                Anterior
+              </Button>
+              <Button variant="outline" size="sm" className="bg-gradient-to-r from-teal-600 to-teal-500 text-white border-teal-500 font-bold rounded-lg shadow-sm hover:shadow-md transition-all duration-200">
+                1
+              </Button>
+              <Button variant="outline" size="sm" disabled className="text-slate-500 border-slate-200 rounded-lg font-semibold">
+                Siguiente
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
 
-          {/* Contenedor del modal */}
-          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg transform transition-all duration-300 scale-100 max-h-[90vh] overflow-hidden">
-            {/* Botón cerrar */}
-            <button
-              className="absolute top-4 right-4 z-10 text-gray-500 hover:text-gray-800 bg-white rounded-full p-1 shadow-sm hover:shadow-md transition"
-              onClick={() => setIsModalOpen(false)}
-              aria-label="Cerrar"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+      {/* Modal de empleado */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300"
+            onClick={() => setIsModalOpen(false)}
+          ></div>
 
-            {/* Formulario con scroll interno */}
-            <div className="overflow-y-auto max-h-[90vh]">
-              <RegistrarEmpleadoForm 
-                onSuccess={handleSaveEmployee}
-                onCancel={() => setIsModalOpen(false)}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 scale-100 max-h-[90vh] overflow-hidden border border-slate-200">
+            <button
+              className="absolute top-4 right-4 z-10 text-slate-400 hover:text-slate-700 bg-white rounded-xl p-2 shadow-lg hover:shadow-xl transition-all duration-200 border border-slate-200"
+              onClick={() => setIsModalOpen(false)}
+              aria-label="Cerrar"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
 
-      {/* Dialog de eliminación */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. El empleado será eliminado permanentemente del sistema.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            <div className="overflow-y-auto max-h-[90vh]">
+              <RegistrarEmpleadoForm 
+                onSuccess={handleSaveEmployee}
+                onCancel={() => setIsModalOpen(false)}
+                employee={selectedEmployee}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
-      <Toaster />
-    </div>
-  );
+      {/* Dialog de eliminación */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="rounded-2xl border-slate-200">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-bold text-slate-900">¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-slate-600 font-medium">
+              Esta acción no se puede deshacer. El empleado{" "}
+              <span className="font-bold text-slate-900">
+                {/* CORREGIDO: Usar comillas invertidas (backticks) */}
+                {employeeToDelete?.nombre} {employeeToDelete?.apellido}
+              </span>{" "}
+              será eliminado permanentemente del sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-bold border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete} 
+              className="bg-gradient-to-r from-rose-600 to-rose-500 text-white hover:from-rose-700 hover:to-rose-600 font-bold shadow-lg shadow-rose-500/30 rounded-xl"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Toaster />
+    </div>
+  );
 }

@@ -5,7 +5,8 @@ from typing import Optional, Any
 
 from gateway.app.config import settings
 
-router = APIRouter()
+# ✅ SOLUCIÓN: Deshabilitar trailing slash redirect
+router = APIRouter(redirect_slashes=False)
 
 # ========================================
 # FUNCIÓN CENTRAL: FORWARD REQUEST
@@ -30,7 +31,8 @@ async def forward_request(
         forward_headers = {}
 
     async with httpx.AsyncClient(
-        timeout=httpx.Timeout(settings.request_timeout, connect=settings.connect_timeout)
+        timeout=httpx.Timeout(settings.request_timeout, connect=settings.connect_timeout),
+        follow_redirects=False  # ✅ No seguir redirects
     ) as client:
         try:
             response = await client.request(
@@ -42,16 +44,26 @@ async def forward_request(
             )
 
             # ✅ CORRECCIÓN: Manejar respuestas vacías y errores de JSON
-            try:
-                content = response.json() if response.content else None
-            except Exception:
-                # Si no se puede parsear como JSON, devolver el texto plano
-                content = {"detail": response.text if response.text else "Empty response"}
+            if response.status_code == 204 or not response.content:
+                content = None
+            else:
+                try:
+                    content = response.json()
+                except Exception:
+                    content = {"detail": response.text if response.text else "Empty response"}
+            
+            # ✅ CORRECCIÓN: No incluir headers del microservicio, solo CORS
+            cors_headers = {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization",
+                "Access-Control-Allow-Credentials": "true"
+            }
             
             return JSONResponse(
                 content=content,
                 status_code=response.status_code,
-                headers=dict(response.headers)
+                headers=cors_headers
             )
 
         except httpx.ConnectError:
@@ -72,31 +84,61 @@ async def forward_request(
 
 
 # ========================================
-# ✅ RUTAS CONSOLIDADAS (SIN PREFIJO /rh)
-# El prefijo /rh se agrega en main.py
+# RUTAS DE EMPLEADOS - SIN BARRA FINAL
 # ========================================
 
-# --- ESTADÍSTICAS Y ALERTAS (PRIORIDAD ALTA) ---
-
-@router.get("/stats/resumen")
-async def get_resumen_stats_via_gateway(request: Request):
-    """Obtiene el resumen de estadísticas consolidadas del sistema RH."""
+@router.post("/employees", status_code=201)
+async def create_employee_via_gateway(request: Request):
+    """Crea un nuevo empleado."""
+    data = await request.json()
     return await forward_request(
-        "GET",
-        f"{settings.rh_service_url}/alert/stats/resumen",
+        "POST",
+        f"{settings.rh_service_url}/employees",
+        data=data,
         headers=dict(request.headers.items()),
-        params=request.query_params,
     )
 
 
-@router.get("/alertas/pendientes")
-async def get_pending_alerts_via_gateway(request: Request):
-    """Obtiene todas las alertas pendientes consolidadas del sistema RH."""
+@router.get("/employees")
+async def read_all_employees_via_gateway(request: Request):
+    """Obtiene la lista paginada de todos los empleados."""
     return await forward_request(
         "GET",
-        f"{settings.rh_service_url}/alert/alertas/pendientes",
-        headers=dict(request.headers.items()),
+        f"{settings.rh_service_url}/employees",
         params=request.query_params,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.get("/employees/{employee_id}")
+async def read_employee_by_id_via_gateway(employee_id: int, request: Request):
+    """Obtiene un empleado específico por ID."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/employees/{employee_id}",
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.put("/employees/{employee_id}")
+async def update_employee_via_gateway(employee_id: int, request: Request):
+    """Actualiza completamente los datos de un empleado."""
+    data = await request.json()
+    return await forward_request(
+        "PUT",
+        f"{settings.rh_service_url}/employees/{employee_id}",
+        data=data,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.delete("/employees/{employee_id}", status_code=204)
+async def delete_employee_via_gateway(employee_id: int, request: Request):
+    """Elimina un empleado por ID."""
+    return await forward_request(
+        "DELETE",
+        f"{settings.rh_service_url}/employees/{employee_id}",
+        headers=dict(request.headers.items()),
     )
 
 
@@ -138,74 +180,6 @@ async def get_current_user_via_gateway(request: Request):
     )
 
 
-@router.get("/users/{user_id}")
-async def get_user_by_id_via_gateway(user_id: int, request: Request):
-    """Obtiene un usuario específico por ID."""
-    return await forward_request(
-        "GET",
-        f"{settings.user_service_url}/users/{user_id}",
-        headers=dict(request.headers.items()),
-    )
-
-
-# ========================================
-# RUTAS DE EMPLEADOS
-# ========================================
-
-@router.post("/employees", status_code=201)
-async def create_employee_via_gateway(request: Request):
-    """Crea un nuevo empleado."""
-    data = await request.json()
-    return await forward_request(
-        "POST",
-        f"{settings.rh_service_url}/employees",
-        data=data,
-        headers=dict(request.headers.items()),
-    )
-
-
-@router.get("/employees")
-async def read_all_employees_via_gateway(request: Request):
-    """Obtiene la lista paginada de todos los empleados."""
-    return await forward_request(
-        "GET",
-        f"{settings.rh_service_url}/employees",
-        params=request.query_params,
-        headers=dict(request.headers.items()),
-    )
-
-
-@router.get("/employees/{employee_id}")
-async def read_employee_by_id_via_gateway(employee_id: int):
-    """Obtiene un empleado específico por ID."""
-    return await forward_request(
-        "GET",
-        f"{settings.rh_service_url}/employees/{employee_id}"
-    )
-
-
-@router.put("/employees/{employee_id}")
-async def update_employee_via_gateway(employee_id: int, request: Request):
-    """Actualiza completamente los datos de un empleado."""
-    data = await request.json()
-    return await forward_request(
-        "PUT",
-        f"{settings.rh_service_url}/employees/{employee_id}",
-        data=data,
-        headers=dict(request.headers.items()),
-    )
-
-
-@router.delete("/employees/{employee_id}", status_code=204)
-async def delete_employee_via_gateway(employee_id: int, request: Request):
-    """Elimina un empleado por ID."""
-    return await forward_request(
-        "DELETE",
-        f"{settings.rh_service_url}/employees/{employee_id}",
-        headers=dict(request.headers.items()),
-    )
-
-
 # ========================================
 # RUTAS DE DOCUMENTOS
 # ========================================
@@ -229,37 +203,6 @@ async def read_documents_via_gateway(request: Request):
         "GET",
         f"{settings.rh_service_url}/documents",
         params=request.query_params,
-        headers=dict(request.headers.items()),
-    )
-
-
-@router.get("/documents/{document_id}")
-async def read_document_by_id_via_gateway(document_id: int):
-    """Obtiene un documento específico por ID."""
-    return await forward_request(
-        "GET",
-        f"{settings.rh_service_url}/documents/{document_id}"
-    )
-
-
-@router.put("/documents/{document_id}")
-async def update_document_via_gateway(document_id: int, request: Request):
-    """Actualiza un documento por ID."""
-    data = await request.json()
-    return await forward_request(
-        "PUT",
-        f"{settings.rh_service_url}/documents/{document_id}",
-        data=data,
-        headers=dict(request.headers.items()),
-    )
-
-
-@router.delete("/documents/{document_id}", status_code=204)
-async def delete_document_via_gateway(document_id: int, request: Request):
-    """Elimina un documento por ID."""
-    return await forward_request(
-        "DELETE",
-        f"{settings.rh_service_url}/documents/{document_id}",
         headers=dict(request.headers.items()),
     )
 
@@ -291,37 +234,6 @@ async def read_schedules_via_gateway(request: Request):
     )
 
 
-@router.get("/schedules/{schedule_id}")
-async def read_schedule_by_id_via_gateway(schedule_id: int):
-    """Obtiene un horario específico por ID."""
-    return await forward_request(
-        "GET",
-        f"{settings.rh_service_url}/schedules/{schedule_id}"
-    )
-
-
-@router.put("/schedules/{schedule_id}")
-async def update_schedule_via_gateway(schedule_id: int, request: Request):
-    """Actualiza un horario por ID."""
-    data = await request.json()
-    return await forward_request(
-        "PUT",
-        f"{settings.rh_service_url}/schedules/{schedule_id}",
-        data=data,
-        headers=dict(request.headers.items()),
-    )
-
-
-@router.delete("/schedules/{schedule_id}", status_code=204)
-async def delete_schedule_via_gateway(schedule_id: int, request: Request):
-    """Elimina un horario por ID."""
-    return await forward_request(
-        "DELETE",
-        f"{settings.rh_service_url}/schedules/{schedule_id}",
-        headers=dict(request.headers.items()),
-    )
-
-
 # ========================================
 # RUTAS DE SOLICITUDES (REQUEST)
 # ========================================
@@ -345,37 +257,6 @@ async def read_requests_via_gateway(request: Request):
         "GET",
         f"{settings.rh_service_url}/request",
         params=request.query_params,
-        headers=dict(request.headers.items()),
-    )
-
-
-@router.get("/request/{request_id}")
-async def read_request_by_id_via_gateway(request_id: int):
-    """Obtiene una solicitud específica por ID."""
-    return await forward_request(
-        "GET",
-        f"{settings.rh_service_url}/request/{request_id}"
-    )
-
-
-@router.patch("/request/{request_id}")
-async def update_request_status_via_gateway(request_id: int, request: Request):
-    """Actualiza el estado de una solicitud."""
-    data = await request.json()
-    return await forward_request(
-        "PATCH",
-        f"{settings.rh_service_url}/request/{request_id}",
-        data=data,
-        headers=dict(request.headers.items()),
-    )
-
-
-@router.delete("/request/{request_id}", status_code=204)
-async def delete_request_via_gateway(request_id: int, request: Request):
-    """Elimina una solicitud por ID."""
-    return await forward_request(
-        "DELETE",
-        f"{settings.rh_service_url}/request/{request_id}",
         headers=dict(request.headers.items()),
     )
 
@@ -407,49 +288,6 @@ async def read_shifts_via_gateway(request: Request):
     )
 
 
-@router.get("/shift/{shift_id}")
-async def read_shift_by_id_via_gateway(shift_id: int):
-    """Obtiene un turno específico por ID."""
-    return await forward_request(
-        "GET",
-        f"{settings.rh_service_url}/shift/{shift_id}"
-    )
-
-
-@router.put("/shift/{shift_id}")
-async def update_shift_via_gateway(shift_id: int, request: Request):
-    """Actualiza un turno por ID."""
-    data = await request.json()
-    return await forward_request(
-        "PUT",
-        f"{settings.rh_service_url}/shift/{shift_id}",
-        data=data,
-        headers=dict(request.headers.items()),
-    )
-
-
-@router.patch("/shift/{shift_id}/assign")
-async def assign_employee_to_shift_via_gateway(shift_id: int, request: Request):
-    """Asigna un empleado a un turno."""
-    data = await request.json()
-    return await forward_request(
-        "PATCH",
-        f"{settings.rh_service_url}/shift/{shift_id}/assign",
-        data=data,
-        headers=dict(request.headers.items()),
-    )
-
-
-@router.delete("/shift/{shift_id}", status_code=204)
-async def delete_shift_via_gateway(shift_id: int, request: Request):
-    """Elimina un turno por ID."""
-    return await forward_request(
-        "DELETE",
-        f"{settings.rh_service_url}/shift/{shift_id}",
-        headers=dict(request.headers.items()),
-    )
-
-
 # ========================================
 # RUTAS DE CAPACITACIÓN (TRAINING)
 # ========================================
@@ -473,36 +311,5 @@ async def read_trainings_via_gateway(request: Request):
         "GET",
         f"{settings.rh_service_url}/training",
         params=request.query_params,
-        headers=dict(request.headers.items()),
-    )
-
-
-@router.get("/training/{training_id}")
-async def read_training_by_id_via_gateway(training_id: int):
-    """Obtiene un registro de capacitación por ID."""
-    return await forward_request(
-        "GET",
-        f"{settings.rh_service_url}/training/{training_id}"
-    )
-
-
-@router.put("/training/{training_id}")
-async def update_training_via_gateway(training_id: int, request: Request):
-    """Actualiza un registro de capacitación por ID."""
-    data = await request.json()
-    return await forward_request(
-        "PUT",
-        f"{settings.rh_service_url}/training/{training_id}",
-        data=data,
-        headers=dict(request.headers.items()),
-    )
-
-
-@router.delete("/training/{training_id}", status_code=204)
-async def delete_training_via_gateway(training_id: int, request: Request):
-    """Elimina un registro de capacitación por ID."""
-    return await forward_request(
-        "DELETE",
-        f"{settings.rh_service_url}/training/{training_id}",
         headers=dict(request.headers.items()),
     )
