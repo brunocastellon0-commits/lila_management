@@ -7,19 +7,17 @@ import TarjetaCaracteristica from "../assets/components/auth_components/tarjeta_
 const Login = () => {
   const navigate = useNavigate();
   const [cargando, setCargando] = useState(false);
-  const [identifier, setIdentifier] = useState(""); // puede ser email o username
+  const [identifier, setIdentifier] = useState(""); // email o username
   const [password, setPassword] = useState("");
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:7000";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!identifier || !password) {
       alert("Todos los campos son obligatorios");
       return;
     }
-
     setCargando(true);
 
     try {
@@ -55,25 +53,25 @@ const Login = () => {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-[#f5f7fa] to-[#c3cfe2] p-5">
+    <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-white to-cyan-50 p-5">
       <div className="flex w-full max-w-[1000px] min-h-[600px] bg-white rounded-2xl overflow-hidden shadow-2xl animate-fadeIn">
         {/* Lado Izquierdo */}
-        <div className="flex-1 bg-gradient-to-br from-[#4b6cb7] to-[#182848] text-white p-10 flex flex-col justify-center relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\' width=\\'100\\' height=\\'100\\'><circle cx=\\'50\\' cy=\\'50\\' r=\\'40\\' stroke=\\'white\\' stroke-width=\\'2\\' fill=\\'none\\'/></svg>')] bg-[length:200px]" />
+        <div className="flex-1 bg-gradient-to-br from-teal-500 to-cyan-500 text-white p-10 flex flex-col justify-center relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'><circle cx=\\'50\\' cy=\\'50\\' r=\\'40\\' stroke=\\'white\\' stroke-width=\\'2\\' fill=\\'none\\'/></svg>')] bg-[length:200px]" />
+
           <div className="flex items-center mb-8 relative z-10">
             <div className="w-[50px] h-[50px] bg-white rounded-xl flex items-center justify-center mr-4">
-              <i className="fas fa-coffee text-2xl text-[#4b6cb7]" />
+              <i className="fas fa-coffee text-2xl text-teal-500" />
             </div>
             <div className="text-2xl font-bold">LILA Management</div>
           </div>
 
-          <div className="welcome-text bg-[#182748] p-5 rounded-xl relative z-10">
-            <h1 className="text-3xl mb-3 font-bold bg-gradient-to-r from-[#077171] to-[#02f1b9] bg-clip-text text-transparent">
+          <div className="welcome-text bg-teal-600/20 p-5 rounded-xl relative z-10">
+            <h1 className="text-3xl mb-3 font-bold bg-gradient-to-r from-teal-400 to-cyan-300 bg-clip-text text-transparent">
               Bienvenido de nuevo
             </h1>
             <p className="text-white/90 leading-relaxed">
-              Accede a tu cuenta de LILA Management para gestionar todas las
-              sucursales de La Bourbonería desde un solo lugar.
+              Accede a tu cuenta de LILA Management para gestionar todas las sucursales desde un solo lugar.
             </p>
           </div>
 
@@ -88,8 +86,8 @@ const Login = () => {
         <div className="flex-1 p-10 flex flex-col justify-center bg-white animate-fadeIn">
           <div className="max-w-[400px] mx-auto w-full">
             <div className="text-center mb-10">
-              <h2 className="text-3xl text-[#2d3748] font-semibold mb-2">Iniciar Sesión</h2>
-              <p className="text-[#718096] text-base">
+              <h2 className="text-3xl text-gray-900 font-semibold mb-2">Iniciar Sesión</h2>
+              <p className="text-gray-500 text-base">
                 Ingresa tu usuario o correo y contraseña
               </p>
             </div>
@@ -112,19 +110,19 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
               />
 
-              <div className="flex justify-between items-center text-sm text-[#2d3748] mb-4">
+              <div className="flex justify-between items-center text-sm text-gray-700 mb-4">
                 <label className="flex items-center space-x-2">
-                  <input type="checkbox" className="accent-[#4b6cb7]" />
+                  <input type="checkbox" className="accent-teal-500" />
                   <span>Recordarme</span>
                 </label>
-                <a href="#" className="text-[#4b6cb7] font-medium hover:underline">
+                <a href="#" className="text-teal-500 font-medium hover:underline">
                   ¿Olvidaste tu contraseña?
                 </a>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3 bg-gradient-to-r from-[#4b6cb7] to-[#182848] text-white rounded-xl font-semibold shadow-lg hover:-translate-y-1 transition-all"
+                className="w-full py-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-2xl font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300"
                 disabled={cargando}
               >
                 {cargando ? "Iniciando sesión..." : "Iniciar Sesión"}
@@ -143,9 +141,9 @@ const Login = () => {
               <BotonSocial claseIcono="fab fa-apple" color="#000000" />
             </div>
 
-            <div className="text-center text-sm text-[#718096]">
+            <div className="text-center text-sm text-gray-500">
               ¿No tienes una cuenta?{" "}
-              <Link to="/register" className="text-[#4b6cb7] font-semibold hover:underline">
+              <Link to="/register" className="text-teal-500 font-semibold hover:underline">
                 Registrarse
               </Link>
             </div>

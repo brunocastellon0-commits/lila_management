@@ -61,7 +61,61 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error interno del servidor: {str(e)}"
         )
-
+# Agregar después del endpoint de register normal
+@routes.post("/register-employee", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def register_employee_user(user_data: dict, db: Session = Depends(get_db)):
+    """
+    Endpoint específico para crear usuario de empleado.
+    Se usa desde el gateway cuando se crea un nuevo empleado.
+    """
+    logger.info(f"Creando usuario para empleado: {user_data.get('email')}")
+    
+    try:
+        # Verificar si el email ya existe
+        if get_user_by_email(db, user_data.get("email")):
+            logger.warning(f"Email ya registrado: {user_data.get('email')}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El correo electrónico ya está registrado"
+            )
+        
+        # Verificar si el username ya existe
+        if get_user_by_username(db, user_data.get("username")):
+            # Si el username existe, generar uno alternativo
+            base_username = user_data.get("username")
+            counter = 1
+            new_username = f"{base_username}{counter}"
+            
+            while get_user_by_username(db, new_username):
+                counter += 1
+                new_username = f"{base_username}{counter}"
+            
+            user_data["username"] = new_username
+            logger.info(f"Username cambiado a: {new_username}")
+        
+        # Crear el usuario usando el schema existente
+        user_create = UserCreate(
+            username=user_data.get("username"),
+            email=user_data.get("email"),
+            password=user_data.get("password"),
+            role=user_data.get("role", "employee"),
+            is_active=True
+        )
+        
+        new_user = create_user(db, user_create)
+        logger.info(f"Usuario de empleado creado exitosamente: {new_user.username} (ID: {new_user.id})")
+        
+        return new_user
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error al crear usuario de empleado: {str(e)}", exc_info=True)
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error interno del servidor: {str(e)}"
+        )
 
 # -----------------------------
 # LOGIN DE USUARIO

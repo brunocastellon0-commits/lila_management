@@ -14,6 +14,8 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
     tarifa_hora: "",
     es_salario_fijo: false,
     desempeño_score: 50,
+    password: "", // ← NUEVO CAMPO
+    confirmPassword: "" // ← NUEVO CAMPO
   });
 
   // Cargar datos del empleado si estamos editando
@@ -30,6 +32,8 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
         tarifa_hora: employee.tarifa_hora || "",
         es_salario_fijo: employee.es_salario_fijo || false,
         desempeño_score: employee.desempeño_score || 50,
+        password: "", // No cargar contraseña en edición
+        confirmPassword: "" // No cargar confirmación en edición
       });
     }
   }, [employee])
@@ -49,7 +53,7 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
 
   const validateForm = () => {
     const newErrors = {};
-    const requiredFields = ["nombre", "apellido", "email", "puesto", "rol_id", "sucursal_id", "fecha_ingreso"];
+    const requiredFields = ["nombre", "apellido", "email", "puesto", "rol_id", "sucursal_id", "fecha_ingreso", "password"]; // ← Agregar password
     
     requiredFields.forEach((key) => {
       if (!formData[key]) {
@@ -60,6 +64,16 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
     // Validar email
     if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Email inválido";
+    }
+
+    // Validar contraseña
+    if (formData.password && formData.password.length < 6) {
+      newErrors.password = "La contraseña debe tener al menos 6 caracteres";
+    }
+
+    // Validar confirmación de contraseña
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Las contraseñas no coinciden";
     }
 
     // Validar tarifa si no es salario fijo
@@ -89,6 +103,17 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
 
     setSubmitLoading(true);
     try {
+      // Función para mapear rol_id a role
+      const getRoleFromRolId = (rol_id) => {
+        const roleMap = {
+          "1": "employee",    // Mesero
+          "2": "admin",       // Administrador
+          "3": "manager",     // Gerente
+          "4": "supervisor"   // Supervisor
+        };
+        return roleMap[rol_id] || "employee";
+      };
+
       const payload = {
         nombre: formData.nombre,
         apellido: formData.apellido,
@@ -100,12 +125,18 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
         tarifa_hora: formData.tarifa_hora ? parseFloat(formData.tarifa_hora) : null,
         es_salario_fijo: formData.es_salario_fijo,
         desempeño_score: parseInt(formData.desempeño_score) || 50,
+        password: formData.password,
+        // ¡AGREGAR ESTOS CAMPOS PARA EL USUARIO!
+        username: `${formData.nombre.toLowerCase()}.${formData.apellido.toLowerCase()}`,
+        role: getRoleFromRolId(formData.rol_id)  // ← ESTE ES EL CAMPO CLAVE
       };
 
-      const result = await employeeService.createEmployee(payload);
+      console.log("Enviando payload:", payload); // Para debug
+
+      const result = await employeeService.createEmployeeWithUser(payload);
 
       toast.success(`Empleado ${result.nombre || payload.nombre} registrado con éxito.`, {
-          description: `ID: ${result.id}`
+          description: `ID: ${result.id} | Usuario: ${result.user?.email || formData.email} | Rol: ${payload.role}`
       });
       
       // Resetear formulario
@@ -120,6 +151,8 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
         tarifa_hora: "",
         es_salario_fijo: false,
         desempeño_score: 50,
+        password: "",
+        confirmPassword: ""
       });
 
       if (onSuccess) {
@@ -245,6 +278,55 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
             )}
           </div>
 
+          {/* Contraseña y Confirmación */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label className={labelClass}>
+                Contraseña <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                className={`${inputClass} ${errors.password ? errorClass : ""}`}
+                placeholder="Mínimo 6 caracteres"
+                disabled={submitLoading}
+              />
+              {errors.password && (
+                <span className="text-rose-600 text-xs mt-1.5 block font-semibold flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {errors.password}
+                </span>
+              )}
+            </div>
+
+            <div>
+              <label className={labelClass}>
+                Confirmar Contraseña <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className={`${inputClass} ${errors.confirmPassword ? errorClass : ""}`}
+                placeholder="Repite la contraseña"
+                disabled={submitLoading}
+              />
+              {errors.confirmPassword && (
+                <span className="text-rose-600 text-xs mt-1.5 block font-semibold flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {errors.confirmPassword}
+                </span>
+              )}
+            </div>
+          </div>
+
           {/* Grid para puesto y rol */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Puesto */}
@@ -285,8 +367,8 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
                 disabled={submitLoading}
               >
                 <option value="">Seleccione un rol</option>
-                <option value="1">Administrador</option>
-                <option value="2">Empleado</option>
+                <option value="1">Mesero</option>
+                <option value="2">Administrador</option>
                 <option value="3">Gerente</option>
                 <option value="4">Supervisor</option>
               </select>

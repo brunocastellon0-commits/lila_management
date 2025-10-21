@@ -9,7 +9,9 @@ import {
   X,
   User,
   CheckCircle2,
-  XCircle
+  XCircle,
+  AlertCircle,
+  Eye
 } from "lucide-react";
 
 import { Button } from "../ui/button";
@@ -44,13 +46,175 @@ import { Avatar, AvatarFallback } from "../ui/avatar";
 import { Toaster } from "../ui/sonner";
 import { employeeScheduleService } from "../../../api/employeeScheduleService";
 
+// ============================================
+// COMPONENTE DE ACCESO DENEGADO
+// ============================================
+function AccesoDenegado() {
+  return (
+    <div className="p-8 bg-gradient-to-br from-slate-50 via-white to-teal-50/30 min-h-screen flex items-center justify-center">
+      <div className="bg-white p-8 rounded-2xl border border-slate-200/60 shadow-sm max-w-md text-center">
+        <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-slate-900 mb-4">Acceso Restringido</h2>
+        <p className="text-slate-600 mb-2">
+          No tienes permisos para acceder a la gestión completa de horarios.
+        </p>
+        <p className="text-slate-500 text-sm mb-6">
+          Este módulo está disponible solo para administradores del sistema.
+        </p>
+        <p className="text-slate-500 text-sm">
+          Si necesitas acceso, contacta al administrador del sistema.
+        </p>
+        <Button 
+          className="mt-6 bg-teal-600 hover:bg-teal-700"
+          onClick={() => window.location.href = '/mi-horario'}
+        >
+          <Eye className="w-4 h-4 mr-2" />
+          Ver Mi Horario Personal
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// COMPONENTE DE VISUALIZACIÓN PARA EMPLEADOS
+// ============================================
+function MiHorarioPersonal() {
+  const [mySchedules, setMySchedules] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadMySchedules();
+  }, []);
+
+  const loadMySchedules = async () => {
+    try {
+      // En una app real, esto vendría de tu contexto de autenticación
+      const currentEmployeeId = localStorage.getItem('currentEmployeeId') || '1'; // Ejemplo
+      const allSchedules = await employeeScheduleService.getAllSchedules();
+      
+      // Filtrar solo los horarios del empleado actual
+      const mySchedules = allSchedules.filter(
+        schedule => schedule.employee_id.toString() === currentEmployeeId
+      );
+      
+      setMySchedules(mySchedules);
+    } catch (error) {
+      console.error("Error al cargar horarios personales:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getDiaNombre = (dia) => {
+    const diasSemana = [
+      { value: 1, label: "Lunes" },
+      { value: 2, label: "Martes" },
+      { value: 3, label: "Miércoles" },
+      { value: 4, label: "Jueves" },
+      { value: 5, label: "Viernes" },
+      { value: 6, label: "Sábado" },
+      { value: 7, label: "Domingo" }
+    ];
+    const diaObj = diasSemana.find((d) => d.value === dia);
+    return diaObj ? diaObj.label : "N/A";
+  };
+
+  const formatTimeForInput = (timeObj) => {
+    if (!timeObj) return '';
+    if (typeof timeObj === 'string') {
+      return timeObj.slice(0, 5);
+    }
+    return `${String(timeObj.hours).padStart(2, '0')}:${String(timeObj.minutes).padStart(2, '0')}`;
+  };
+
+  if (loading) {
+    return (
+      <div className="p-8 bg-gradient-to-br from-slate-50 via-white to-teal-50/30 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600">Cargando tu horario...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-8 bg-gradient-to-br from-slate-50 via-white to-teal-50/30 min-h-screen">
+      {/* Encabezado para empleados */}
+      <div className="mb-8 text-center">
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <Calendar className="h-8 w-8 text-teal-600" />
+          <h1 className="text-3xl font-bold text-slate-900">Mi Horario Personal</h1>
+        </div>
+        <p className="text-slate-600 font-medium">
+          Consulta tus turnos y horarios asignados
+        </p>
+      </div>
+
+      {/* Horarios del empleado */}
+      {mySchedules.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-200/60 p-8 text-center">
+          <Clock className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-slate-700 mb-2">No tienes horarios asignados</h3>
+          <p className="text-slate-500">Contacta con recursos humanos para asignarte horarios.</p>
+        </div>
+      ) : (
+        <div className="grid gap-6 max-w-4xl mx-auto">
+          {mySchedules.map((schedule) => (
+            <div key={schedule.id} className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">{schedule.nombre_horario}</h3>
+                  <Badge 
+                    className={`
+                      mt-2 ${schedule.es_actual 
+                        ? 'bg-emerald-500 text-white' 
+                        : 'bg-slate-200 text-slate-700'
+                      }
+                    `}
+                  >
+                    {schedule.es_actual ? 'Horario Actual' : 'Horario Inactivo'}
+                  </Badge>
+                </div>
+                <Badge variant="outline" className="border-teal-200 text-teal-700 text-lg px-4 py-2">
+                  {getDiaNombre(schedule.dia_semana)}
+                </Badge>
+              </div>
+              
+              <div className="flex items-center gap-4 text-slate-700">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-teal-600" />
+                  <span className="font-semibold">Inicio:</span>
+                  <span className="text-lg">{formatTimeForInput(schedule.hora_inicio_patron)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-teal-600" />
+                  <span className="font-semibold">Fin:</span>
+                  <span className="text-lg">{formatTimeForInput(schedule.hora_fin_patron)}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================
+// COMPONENTE PRINCIPAL MODIFICADO
+// ============================================
 export default function GestionHorariosContent() {
+  const [userRole, setUserRole] = useState(null);
+  const [loading, setLoading] = useState(true);
+  
+  // Estados para administradores
   const [schedules, setSchedules] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [scheduleToDelete, setScheduleToDelete] = useState(null);
-
   const [formData, setFormData] = useState({
     id: null,
     employee_id: "",
@@ -60,11 +224,30 @@ export default function GestionHorariosContent() {
     hora_fin_patron: "",
     es_actual: true
   });
-
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDia, setFilterDia] = useState("todos");
 
-  // 🔹 Días de la semana CORREGIDOS: 1-7 (Lunes-Domingo)
+  // Verificar permisos del usuario
+  useEffect(() => {
+    const checkPermissions = async () => {
+      // En una app real, esto vendría de tu contexto de autenticación
+      setTimeout(() => {
+        const userIsAdmin = localStorage.getItem('userRole') === 'admin';
+        // const userIsAdmin = false; // Para probar como empleado normal
+        setUserRole(userIsAdmin ? 'admin' : 'employee');
+        setLoading(false);
+        
+        // Si es admin, cargar los datos
+        if (userIsAdmin) {
+          loadSchedules();
+        }
+      }, 500);
+    };
+
+    checkPermissions();
+  }, []);
+
+  // 🔹 Solo para administradores
   const diasSemana = [
     { value: 1, label: "Lunes" },
     { value: 2, label: "Martes" },
@@ -74,11 +257,6 @@ export default function GestionHorariosContent() {
     { value: 6, label: "Sábado" },
     { value: 7, label: "Domingo" }
   ];
-
-  // 🔹 Cargar datos del backend
-  useEffect(() => {
-    loadSchedules();
-  }, []);
 
   const loadSchedules = async () => {
     try {
@@ -111,14 +289,11 @@ export default function GestionHorariosContent() {
     setIsFormOpen(false);
   };
 
-  // 🔹 Formatear tiempo para input (de objeto time a string "HH:MM")
   const formatTimeForInput = (timeObj) => {
     if (!timeObj) return '';
     if (typeof timeObj === 'string') {
-      // Si ya es string, tomar solo HH:MM
       return timeObj.slice(0, 5);
     }
-    // Si es objeto time de Python
     return `${String(timeObj.hours).padStart(2, '0')}:${String(timeObj.minutes).padStart(2, '0')}`;
   };
 
@@ -137,13 +312,12 @@ export default function GestionHorariosContent() {
     }
 
     try {
-      // 🔹 Preparar datos EXACTAMENTE como espera el backend
       const scheduleData = {
         employee_id: parseInt(formData.employee_id),
         nombre_horario: formData.nombre_horario,
-        dia_semana: parseInt(formData.dia_semana), // ← 1-7, no 0-6
-        hora_inicio_patron: formData.hora_inicio_patron + ":00", // ← agregar segundos
-        hora_fin_patron: formData.hora_fin_patron + ":00", // ← agregar segundos
+        dia_semana: parseInt(formData.dia_semana),
+        hora_inicio_patron: formData.hora_inicio_patron + ":00",
+        hora_fin_patron: formData.hora_fin_patron + ":00",
         es_actual: formData.es_actual
       };
 
@@ -170,7 +344,7 @@ export default function GestionHorariosContent() {
         id: fullSchedule.id,
         employee_id: fullSchedule.employee_id.toString(),
         nombre_horario: fullSchedule.nombre_horario,
-        dia_semana: fullSchedule.dia_semana.toString(), // ← 1-7
+        dia_semana: fullSchedule.dia_semana.toString(),
         hora_inicio_patron: formatTimeForInput(fullSchedule.hora_inicio_patron),
         hora_fin_patron: formatTimeForInput(fullSchedule.hora_fin_patron),
         es_actual: fullSchedule.es_actual
@@ -200,7 +374,6 @@ export default function GestionHorariosContent() {
     }
   };
 
-  // 🔹 FUNCIONALIDAD NUEVA: Crear para todos los días
   const handleCreateAllDays = async () => {
     if (!formData.employee_id || !formData.nombre_horario || 
         !formData.hora_inicio_patron || !formData.hora_fin_patron) {
@@ -240,6 +413,30 @@ export default function GestionHorariosContent() {
     return diaObj ? diaObj.label : "N/A";
   };
 
+  // ============================================
+  // RENDER PRINCIPAL CON CONTROL DE ACCESO
+  // ============================================
+  if (loading) {
+    return (
+      <div className="p-8 bg-gradient-to-br from-slate-50 via-white to-teal-50/30 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600">Verificando permisos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Si no es admin, mostrar acceso restringido o su horario personal
+  if (userRole !== 'admin') {
+    return <MiHorarioPersonal />;
+    // O si quieres mostrar acceso denegado en lugar del horario personal:
+    // return <AccesoDenegado />;
+  }
+
+  // ============================================
+  // INTERFAZ DE ADMINISTRADOR (tu código original)
+  // ============================================
   return (
     <div className="p-8 bg-gradient-to-br from-slate-50 via-white to-teal-50/30 min-h-screen">
       <Toaster position="top-right" richColors />
@@ -262,6 +459,8 @@ export default function GestionHorariosContent() {
           Nuevo Horario
         </Button>
       </div>
+
+      {/* ... (el resto de tu código original para administradores) */}
 
       {/* Filtros */}
       <div className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm mb-6 flex flex-col md:flex-row gap-4">
@@ -380,7 +579,6 @@ export default function GestionHorariosContent() {
                 {isEditing ? "Actualizar" : "Guardar"}
               </Button>
               
-              {/* Botón para crear en todos los días - solo en creación */}
               {!isEditing && (
                 <Button
                   type="button"

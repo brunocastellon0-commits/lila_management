@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Users, UserPlus, GraduationCap, Shield, Settings, HelpCircle, Menu, Bell } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Users, UserPlus, GraduationCap, Shield, Settings, HelpCircle, Menu, Bell, AlertCircle } from "lucide-react";
 import { Button } from "../assets/components/ui/button";
 
 // ============================================
@@ -9,6 +9,43 @@ import { Sidebar } from "../assets/components/rh/sidebar";
 import GestionNominaContent from "../assets/components/rh/gestion_nomina";
 import { RegistrarEmpleadoForm } from "../assets/components/rh/registrar_Empleado_form";
 import ScheduleContent from "../assets/components/rh/schedule_employee";
+
+// ============================================
+// COMPONENTE DE ACCESO DENEGADO
+// ============================================
+function AccesoDenegado() {
+  return (
+    <div className="flex-1 flex flex-col min-h-0">
+      <Header 
+        pageTitle="Gestión y Nómina" 
+        pageSubtitle="Administración de personal" 
+        onMenuClick={() => {}} 
+      />
+      <main className="flex-1 overflow-y-auto flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm max-w-md text-center">
+          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Acceso Restringido</h2>
+          <p className="text-gray-600 mb-2">
+            No tienes permisos para acceder al módulo de Recursos Humanos.
+          </p>
+          <p className="text-gray-500 text-sm mb-6">
+            Este módulo está disponible solo para administradores del sistema.
+          </p>
+          <p className="text-gray-500 text-sm">
+            Si necesitas acceso, contacta al administrador del sistema.
+          </p>
+          <Button 
+            className="mt-6"
+            onClick={() => window.location.href = '/schedule'}
+          >
+            Ir a Mi Horario
+          </Button>
+        </div>
+      </main>
+    </div>
+  );
+}
+
 // ============================================
 // HEADER COMPONENT
 // ============================================
@@ -43,7 +80,7 @@ function Header({ pageTitle, pageSubtitle, onMenuClick }) {
 }
 
 // ============================================
-// DASHBOARD COMPONENT
+// DASHBOARD COMPONENT (TU DASHBOARD ORIGINAL)
 // ============================================
 function DashboardContent() {
   return (
@@ -157,15 +194,44 @@ function PlaceholderContent({ title, icon: Icon }) {
 }
 
 // ============================================
-// MAIN RH COMPONENT
+// MAIN RH COMPONENT CON CONTROL DE ACCESO
 // ============================================
 export default function Rrhh() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeModule, setActiveModule] = useState("dashboard");
   const [showRegistrarEmpleado, setShowRegistrarEmpleado] = useState(false);
+  const [userRole, setUserRole] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Verificación de permisos
+  useEffect(() => {
+    const checkPermissions = async () => {
+      setTimeout(() => {
+        // Buscar en múltiples claves posibles
+        const possibleRoleKeys = ['role', 'userRole', 'user_role', 'user-role'];
+        let userRole = 'employee';
+        
+        for (const key of possibleRoleKeys) {
+          const value = localStorage.getItem(key);
+          if (value && (value === 'admin' || value === 'administrator')) {
+            userRole = 'admin';
+            break;
+          }
+        }
+        
+        console.log('🔍 Debug Rrhh - Rol detectado:', userRole);
+        
+        setUserRole(userRole);
+        setLoading(false);
+      }, 500);
+    };
+
+    checkPermissions();
+  }, []);
 
   const handleModuleSelect = (moduleId) => {
-    // Si selecciona "Registrar Empleado", mostrar modal
+    if (!userRole || userRole !== 'admin') return;
+    
     if (moduleId === "registrarEmpleado") {
       setShowRegistrarEmpleado(true);
     } else {
@@ -174,19 +240,37 @@ export default function Rrhh() {
     }
   };
 
-  const handleMenuClick = () => setSidebarOpen(!sidebarOpen);
+  const handleMenuClick = () => {
+    if (!userRole || userRole !== 'admin') return;
+    setSidebarOpen(!sidebarOpen);
+  };
 
   const closeRegistrarEmpleado = () => setShowRegistrarEmpleado(false);
 
   const handleEmployeeRegistered = (newEmployee) => {
     console.log("Empleado registrado:", newEmployee);
     closeRegistrarEmpleado();
-    // Opcional: cambiar a gestión nómina después de registrar
-    // setActiveModule("gestionAdministrativa");
   };
 
-  // Función para renderizar el contenido según el módulo activo
+  // Función para renderizar el contenido según permisos
   const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Verificando permisos...</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Si no es admin, mostrar acceso denegado
+    if (userRole !== 'admin') {
+      return <AccesoDenegado />;
+    }
+
+    // Si es admin, mostrar contenido normal
     switch (activeModule) {
       case "dashboard":
         return <DashboardContent />;
@@ -202,21 +286,24 @@ export default function Rrhh() {
         return <PlaceholderContent title="Configuración" icon={Settings} />;
       case "ayuda":
         return <PlaceholderContent title="Ayuda" icon={HelpCircle} />;
+      case "schedule":
+        return <ScheduleContent />;
       default:
         return <DashboardContent />;
-      case "schedule":
-          return <ScheduleContent />;
     }
   };
 
-  // Función para obtener el título y subtítulo según el módulo
+  // Función para obtener el título y subtítulo
   const getPageInfo = () => {
+    if (userRole !== 'admin') {
+      return { title: "Gestión y Nómina", subtitle: "Administración de personal" };
+    }
+
     const titles = {
       dashboard: { title: "La Bourboneria", subtitle: "Resumen general de RRHH" },
       gestionAdministrativa: { title: "Gestión y Nómina", subtitle: "Administración de personal" },
       reclutamiento: { title: "Reclutamiento", subtitle: "Proceso de contratación" },
       capacitacion: { title: "Capacitación", subtitle: "Desarrollo del personal" },
-      registrarEmpleado: { title: "Registrar Empleado", subtitle: "Nuevo ingreso" },
       cumplimiento: { title: "Cumplimiento Legal", subtitle: "Normativas y regulaciones" },
       configuracion: { title: "Configuración", subtitle: "Preferencias del sistema" },
       ayuda: { title: "Ayuda", subtitle: "Soporte y documentación" },
@@ -229,36 +316,39 @@ export default function Rrhh() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div className={`${sidebarOpen ? "block" : "hidden"} lg:block w-64 border-r border-gray-200`}>
-        <Sidebar onModuleSelect={handleModuleSelect} activeModule={activeModule} />
-      </div>
+      {/* Sidebar - Solo mostrar si es admin */}
+      {userRole === 'admin' && (
+        <div className={`${sidebarOpen ? "block" : "hidden"} lg:block w-64 border-r border-gray-200`}>
+          <Sidebar onModuleSelect={handleModuleSelect} activeModule={activeModule} />
+        </div>
+      )}
 
       {/* Contenido principal */}
       <div className="flex-1 flex flex-col min-h-0">
-        <Header
-          pageTitle={pageInfo.title}
-          pageSubtitle={pageInfo.subtitle}
-          onMenuClick={handleMenuClick}
-        />
-
-        <main className="flex-1 overflow-y-auto">
-          {renderContent()}
-        </main>
+        {userRole === 'admin' ? (
+          <>
+            <Header
+              pageTitle={pageInfo.title}
+              pageSubtitle={pageInfo.subtitle}
+              onMenuClick={handleMenuClick}
+            />
+            <main className="flex-1 overflow-y-auto">
+              {renderContent()}
+            </main>
+          </>
+        ) : (
+          renderContent()
+        )}
       </div>
 
-      {/* Modal de Registrar Empleado */}
-      {showRegistrarEmpleado && (
+      {/* Modal de Registrar Empleado - Solo si es admin */}
+      {userRole === 'admin' && showRegistrarEmpleado && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Overlay oscuro */}
           <div
             className="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-300"
             onClick={closeRegistrarEmpleado}
           ></div>
-
-          {/* Contenedor del modal */}
           <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg transform transition-all duration-300 scale-100 max-h-[90vh] overflow-hidden">
-            {/* Botón cerrar */}
             <button
               className="absolute top-4 right-4 z-10 text-gray-500 hover:text-gray-800 bg-white rounded-full p-1 shadow-sm hover:shadow-md transition"
               onClick={closeRegistrarEmpleado}
@@ -268,8 +358,6 @@ export default function Rrhh() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-
-            {/* Formulario con scroll interno */}
             <div className="overflow-y-auto max-h-[90vh]">
               <RegistrarEmpleadoForm 
                 onSuccess={handleEmployeeRegistered}

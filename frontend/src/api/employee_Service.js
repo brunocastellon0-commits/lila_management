@@ -63,6 +63,18 @@ export const employeeService = {
       throw error;
     }
   },
+    createEmployeeWithUser: async (employeeData) => {
+    try {
+      const data = await fetchAPI(`${RH_PREFIX}/employees-with-user`, {
+        method: 'POST',
+        body: JSON.stringify(employeeData)
+      });
+      return data;
+    } catch (error) {
+      console.error('Error creando empleado con usuario:', error);
+      throw error;
+    }
+  },
 
   /**
    * Actualiza un empleado existente

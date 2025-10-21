@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, HTTPException, status
 from fastapi.responses import JSONResponse
 import httpx
 from typing import Optional, Any
-
+import json
 from gateway.app.config import settings
 
 # ✅ SOLUCIÓN: Deshabilitar trailing slash redirect
@@ -140,8 +140,82 @@ async def delete_employee_via_gateway(employee_id: int, request: Request):
         f"{settings.rh_service_url}/employees/{employee_id}",
         headers=dict(request.headers.items()),
     )
+    
+@router.post("/employees-with-user", status_code=201)
+async def create_employee_with_user(request: Request):
+    """
+    Crea un nuevo empleado y su usuario automáticamente.
+    """
+    data = await request.json()
+    
+    try:
+        # 1. Primero crear el empleado en RH service
+        employee_response = await forward_request(
+            "POST",
+            f"{settings.rh_service_url}/employees",
+            data=data,
+            headers=dict(request.headers.items()),
+        )
+        
+        # Si el empleado se creó exitosamente
+        if employee_response.status_code == 201:
+            # ✅ CORRECCIÓN: Obtener el contenido directamente del JSONResponse
+            employee_content = employee_response.body
+            employee_data = json.loads(employee_content.decode()) if employee_content else {}
+            
+            # 2. Crear el usuario en User service
+# En gateway/app/routes.py - ya está usando data.get("password")
+            user_data = {
+                "username": f"{data.get('nombre', '').lower()}.{data.get('apellido', '').lower()}",
+                "email": data.get("email"),
+                "password": data.get("password"),  # ← USA LA CONTRASEÑA DEL FORMULARIO
+                "role": get_role_name(data.get("rol_id")),
+                "employee_id": employee_data.get("id")
+            }
+            
+            user_response = await forward_request(
+                "POST",
+                f"{settings.user_service_url}/auth/register-employee",
+                data=user_data,
+                headers=dict(request.headers.items()),
+            )
+            
+            # Combinar respuestas
+            if user_response.status_code == 201:
+                # ✅ CORRECCIÓN: Obtener contenido del user_response
+                user_content = user_response.body
+                user_data_response = json.loads(user_content.decode()) if user_content else {}
+                
+                employee_data["user"] = user_data_response
+                return JSONResponse(content=employee_data, status_code=201)
+            else:
+                # Si falla crear usuario, eliminar el empleado (rollback)
+                await forward_request(
+                    "DELETE",
+                    f"{settings.rh_service_url}/employees/{employee_data['id']}",
+                    headers=dict(request.headers.items()),
+                )
+                return user_response
+        
+        return employee_response
+        
+    except Exception as e:
+        # Manejo de errores generales
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error en la creación coordinada: {str(e)}"
+        )
 
 
+# Función auxiliar para convertir ID de rol a nombre
+def get_role_name(rol_id: int) -> str:
+    role_mapping = {
+        1: "employee",
+        2: "admin", 
+        3: "manager",
+        4: "supervisor"
+    }
+    return role_mapping.get(rol_id, "employee")
 
 
 # ========================================

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { RegistrarEmpleadoForm } from "./registrar_Empleado_form";
-import GestionHorariosContent from "./schedule_employee"; // Importar el componente de horarios
+import GestionHorariosContent from "./schedule_employee";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { toast } from "sonner";
@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { Toaster } from "../ui/sonner";
 import employeeService from "../../../api/employee_Service";
+import { canAccessRH, canManageEmployees, ROLES } from '../../../utils/roles';
 
 export default function GestionNominaContent() {
   const [employees, setEmployees] = useState([]);
@@ -63,10 +64,40 @@ export default function GestionNominaContent() {
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [selectedEmployeeForSchedule, setSelectedEmployeeForSchedule] = useState(null);
 
-  // Cargar empleados desde el backend
+  // 🔐 NUEVO: Estado para permisos del usuario
+  const [userRole, setUserRole] = useState(null);
+  const [userPermissions, setUserPermissions] = useState({});
+
+  // Cargar empleados y permisos del usuario
   useEffect(() => {
+    loadUserPermissions();
     loadEmployees();
   }, [refreshTrigger]);
+
+  const loadUserPermissions = () => {
+    try {
+    
+      
+      // ✅ NUEVO: Busca directamente en localStorage
+      const userRole = localStorage.getItem('role') || localStorage.getItem('userRole');
+      const roleId = userRole === 'admin' ? ROLES.ADMINISTRADOR : ROLES.MESERO;
+      
+      console.log('🔍 Debug GestionNomina - Role detectado:', userRole, 'Role ID:', roleId);
+      
+      setUserRole(roleId);
+      setUserPermissions({
+        canAccessRH: canAccessRH(roleId),
+        canManageEmployees: canManageEmployees(roleId)
+      });
+    } catch (error) {
+      console.error("Error cargando permisos:", error);
+      setUserRole(ROLES.MESERO);
+      setUserPermissions({
+        canAccessRH: false,
+        canManageEmployees: false
+      });
+    }
+  };
 
   const loadEmployees = async () => {
     setLoading(true);
@@ -106,11 +137,21 @@ export default function GestionNominaContent() {
   const uniqueSucursales = [...new Set(employees.map(emp => emp.sucursal?.nombre_sucursal).filter(Boolean))];
 
   const handleNewEmployee = () => {
+    // 🔐 VERIFICAR PERMISO
+    if (!userPermissions.canManageEmployees) {
+      toast.error("No tienes permisos para crear empleados");
+      return;
+    }
     setSelectedEmployee(null);
     setIsModalOpen(true);
   };
 
   const handleEditEmployee = (employee) => {
+    // 🔐 VERIFICAR PERMISO
+    if (!userPermissions.canManageEmployees) {
+      toast.error("No tienes permisos para editar empleados");
+      return;
+    }
     setSelectedEmployee(employee);
     setIsModalOpen(true);
   };
@@ -144,6 +185,11 @@ export default function GestionNominaContent() {
   };
 
   const handleDeleteClick = (employee) => {
+    // 🔐 VERIFICAR PERMISO
+    if (!userPermissions.canManageEmployees) {
+      toast.error("No tienes permisos para eliminar empleados");
+      return;
+    }
     setEmployeeToDelete(employee);
     setDeleteDialogOpen(true);
   };
@@ -168,6 +214,33 @@ export default function GestionNominaContent() {
   const handleViewEmployee = (employee) => {
     toast.info(`Ver detalles de ${employee.nombre} ${employee.apellido}`);
   };
+
+  // 🔐 PANTALLA DE ACCESO DENEGADO
+  if (!userPermissions.canAccessRH) {
+    return (
+      <div className="p-8 flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-white to-rose-50/30">
+        <div className="text-center max-w-md">
+          <div className="bg-white rounded-2xl border border-rose-200/60 p-8 shadow-lg">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-rose-100 mb-6">
+              <div className="text-rose-500 text-2xl">🚫</div>
+            </div>
+            <h2 className="text-2xl font-bold text-rose-700 mb-3">Acceso Restringido</h2>
+            <p className="text-rose-600 mb-4 font-medium">
+              No tienes permisos para acceder al módulo de Recursos Humanos.
+            </p>
+            <p className="text-slate-500 text-sm mb-6">
+              Este módulo está disponible solo para administradores del sistema.
+            </p>
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <p className="text-sm text-slate-600 font-medium">
+                Si necesitas acceso, contacta al administrador del sistema.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Pantalla de carga
   if (loading) {
@@ -197,14 +270,42 @@ export default function GestionNominaContent() {
             <p className="text-slate-600 font-medium">
               Administra la información del personal de tu restaurante
             </p>
+            {/* 🔐 INDICADOR DE ROL */}
+            <div className="flex items-center gap-2 mt-2">
+              <Badge 
+                variant="outline" 
+                className={`border font-semibold ${
+                  userRole === ROLES.ADMINISTRADOR 
+                    ? "border-teal-200 bg-teal-50 text-teal-700" 
+                    : "border-slate-200 bg-slate-50 text-slate-600"
+                }`}
+              >
+                {userRole === ROLES.ADMINISTRADOR ? "Administrador" : "Mesero"}
+              </Badge>
+              {userRole === ROLES.ADMINISTRADOR && (
+                <span className="text-xs text-teal-600 font-medium">✓ Acceso completo</span>
+              )}
+            </div>
           </div>
-          <Button 
-            onClick={handleNewEmployee} 
-            className="bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white shadow-lg shadow-teal-500/30 hover:shadow-xl hover:shadow-teal-500/40 transition-all duration-300 font-semibold px-6 py-2.5 rounded-xl border border-teal-400/20"
-          >
-            <Plus className="w-4 h-4 mr-2" /> 
-            Nuevo Empleado
-          </Button>
+          
+          {/* 🔐 BOTÓN CONDICIONAL */}
+          {userPermissions.canManageEmployees ? (
+            <Button 
+              onClick={handleNewEmployee} 
+              className="bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white shadow-lg shadow-teal-500/30 hover:shadow-xl hover:shadow-teal-500/40 transition-all duration-300 font-semibold px-6 py-2.5 rounded-xl border border-teal-400/20"
+            >
+              <Plus className="w-4 h-4 mr-2" /> 
+              Nuevo Empleado
+            </Button>
+          ) : (
+            <Button 
+              disabled
+              className="bg-slate-300 text-slate-500 cursor-not-allowed font-semibold px-6 py-2.5 rounded-xl border border-slate-200"
+            >
+              <Plus className="w-4 h-4 mr-2" /> 
+              Nuevo Empleado
+            </Button>
+          )}
         </div>
         
         {/* Indicadores */}
@@ -359,7 +460,7 @@ export default function GestionNominaContent() {
                 </TableCell>
                 <TableCell className="py-4">
                   <div className="flex justify-end gap-2">
-                    {/* 🔹 NUEVO BOTÓN PARA HORARIOS */}
+                    {/* 🔹 BOTÓN PARA HORARIOS (SIEMPRE DISPONIBLE) */}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -369,6 +470,7 @@ export default function GestionNominaContent() {
                     >
                       <Clock className="w-4 h-4" />
                     </Button>
+                    
                     <Button
                       variant="ghost"
                       size="icon"
@@ -377,22 +479,49 @@ export default function GestionNominaContent() {
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEditEmployee(employee)}
-                      className="hover:bg-blue-50 hover:text-blue-700 text-slate-500 transition-all duration-200 rounded-lg"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteClick(employee)}
-                      className="hover:bg-rose-50 hover:text-rose-700 text-slate-500 transition-all duration-200 rounded-lg"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    
+                    {/* 🔐 BOTONES CONDICIONALES */}
+                    {userPermissions.canManageEmployees ? (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditEmployee(employee)}
+                          className="hover:bg-blue-50 hover:text-blue-700 text-slate-500 transition-all duration-200 rounded-lg"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteClick(employee)}
+                          className="hover:bg-rose-50 hover:text-rose-700 text-slate-500 transition-all duration-200 rounded-lg"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled
+                          className="text-slate-300 cursor-not-allowed"
+                          title="Sin permisos para editar"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled
+                          className="text-slate-300 cursor-not-allowed"
+                          title="Sin permisos para eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
@@ -435,8 +564,8 @@ export default function GestionNominaContent() {
         )}
       </div>
 
-      {/* Modal de empleado */}
-      {isModalOpen && (
+      {/* Modal de empleado - 🔐 SOLO SI TIENE PERMISOS */}
+      {isModalOpen && userPermissions.canManageEmployees && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300"
@@ -465,7 +594,7 @@ export default function GestionNominaContent() {
         </div>
       )}
 
-      {/* 🔹 NUEVO MODAL PARA HORARIOS */}
+      {/* 🔹 MODAL PARA HORARIOS (SIEMPRE DISPONIBLE) */}
       {isScheduleModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
@@ -499,32 +628,34 @@ export default function GestionNominaContent() {
         </div>
       )}
 
-      {/* Dialog de eliminación */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="rounded-2xl border-slate-200">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-bold text-slate-900">¿Estás seguro?</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm text-slate-600 font-medium">
-              Esta acción no se puede deshacer. El empleado{" "}
-              <span className="font-bold text-slate-900">
-                {employeeToDelete?.nombre} {employeeToDelete?.apellido}
-              </span>{" "}
-              será eliminado permanentemente del sistema.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="font-bold border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl">
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleConfirmDelete} 
-              className="bg-gradient-to-r from-rose-600 to-rose-500 text-white hover:from-rose-700 hover:to-rose-600 font-bold shadow-lg shadow-rose-500/30 rounded-xl"
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Dialog de eliminación - 🔐 SOLO SI TIENE PERMISOS */}
+      {deleteDialogOpen && userPermissions.canManageEmployees && (
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent className="rounded-2xl border-slate-200">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-xl font-bold text-slate-900">¿Estás seguro?</AlertDialogTitle>
+              <AlertDialogDescription className="text-sm text-slate-600 font-medium">
+                Esta acción no se puede deshacer. El empleado{" "}
+                <span className="font-bold text-slate-900">
+                  {employeeToDelete?.nombre} {employeeToDelete?.apellido}
+                </span>{" "}
+                será eliminado permanentemente del sistema.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="font-bold border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl">
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleConfirmDelete} 
+                className="bg-gradient-to-r from-rose-600 to-rose-500 text-white hover:from-rose-700 hover:to-rose-600 font-bold shadow-lg shadow-rose-500/30 rounded-xl"
+              >
+                Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
       <Toaster />
     </div>
