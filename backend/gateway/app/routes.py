@@ -142,42 +142,6 @@ async def delete_employee_via_gateway(employee_id: int, request: Request):
     )
 
 
-# ========================================
-# RUTAS DE USUARIOS (USER SERVICE)
-# ========================================
-
-@router.post("/auth/register", status_code=201)
-async def register_user_via_gateway(request: Request):
-    """Reenvía la solicitud de registro al User Service."""
-    data = await request.json()
-    return await forward_request(
-        "POST",
-        f"{settings.user_service_url}/auth/register",
-        data=data,
-        headers=dict(request.headers.items()),
-    )
-
-
-@router.post("/auth/login")
-async def login_user_via_gateway(request: Request):
-    """Reenvía la solicitud de login al User Service."""
-    data = await request.json()
-    return await forward_request(
-        "POST",
-        f"{settings.user_service_url}/auth/login",
-        data=data,
-        headers=dict(request.headers.items()),
-    )
-
-
-@router.get("/auth/me")
-async def get_current_user_via_gateway(request: Request):
-    """Reenvía la solicitud para obtener el usuario actual."""
-    return await forward_request(
-        "GET",
-        f"{settings.user_service_url}/auth/me",
-        headers=dict(request.headers.items()),
-    )
 
 
 # ========================================

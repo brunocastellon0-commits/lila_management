@@ -145,6 +145,6 @@ def delete_employee_route(
         )
         
     # 2. Eliminar
-    service.delete_employee(db=db, db_employee=db_employee)
+    service.delete_employee(db=db, employee_id=employee_id)
     # ✅ CORREGIDO: No devolver nada en 204
     return None

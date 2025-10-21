@@ -8,7 +8,7 @@ import { Button } from "../assets/components/ui/button";
 import { Sidebar } from "../assets/components/rh/sidebar";
 import GestionNominaContent from "../assets/components/rh/gestion_nomina";
 import { RegistrarEmpleadoForm } from "../assets/components/rh/registrar_Empleado_form";
-
+import ScheduleContent from "../assets/components/rh/schedule_employee";
 // ============================================
 // HEADER COMPONENT
 // ============================================
@@ -204,6 +204,8 @@ export default function Rrhh() {
         return <PlaceholderContent title="Ayuda" icon={HelpCircle} />;
       default:
         return <DashboardContent />;
+      case "schedule":
+          return <ScheduleContent />;
     }
   };
 
@@ -218,6 +220,7 @@ export default function Rrhh() {
       cumplimiento: { title: "Cumplimiento Legal", subtitle: "Normativas y regulaciones" },
       configuracion: { title: "Configuración", subtitle: "Preferencias del sistema" },
       ayuda: { title: "Ayuda", subtitle: "Soporte y documentación" },
+      schedule: { title: "Gestión de Horarios", subtitle: "Control de turnos del personal" },
     };
     return titles[activeModule] || titles.dashboard;
   };

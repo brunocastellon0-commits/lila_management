@@ -19,7 +19,7 @@ service = EmployeeScheduleService()
 # RUTA 1: CREAR PATRÓN DE HORARIO (POST)
 # --------------------------------------------------------------------
 @router.post(
-    "/",
+    "",
     response_model=EmployeeScheduleResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Crea un nuevo patrón de horario para un empleado"
@@ -51,7 +51,7 @@ def create_schedule_route(
 # RUTA 2: OBTENER HORARIOS (GET - General o por Empleado)
 # --------------------------------------------------------------------
 @router.get(
-    "/",
+    "",
     response_model=List[EmployeeScheduleResponse],
     summary="Obtiene todos los patrones de horario o filtra por empleado"
 )
