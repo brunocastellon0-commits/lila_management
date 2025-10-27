@@ -1,729 +1,744 @@
 import { useState, useEffect } from "react";
-import {
-  Calendar,
-  Clock,
-  Plus,
-  Pencil,
-  Trash2,
-  Save,
-  X,
-  User,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  Eye
-} from "lucide-react";
-
 import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
+import { Avatar, AvatarFallback } from "../ui/avatar";
+import { Card } from "../ui/card";
 import { Input } from "../ui/input";
+import { 
+  Clock, 
+  Users, 
+  UserCheck, 
+  AlertCircle, 
+  Building2,
+  ArrowRightLeft,
+  Check,
+  X,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Calendar as CalendarIcon,
+  Edit,
+  Trash2
+} from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
+import { toast } from "sonner";
+import { Toaster } from "../ui/sonner";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "../ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "../ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "../ui/alert_dialog";
-import { Badge } from "../ui/badge";
-import { Avatar, AvatarFallback } from "../ui/avatar";
-import { Toaster } from "../ui/sonner";
-import { employeeScheduleService } from "../../../api/employeeScheduleService";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../ui/dialog";
 
 // ============================================
-// COMPONENTE DE ACCESO DENEGADO
+// DATOS MOCK
 // ============================================
-function AccesoDenegado() {
+const branches = [
+  { id: "central", name: "Central", count: 24 },
+  { id: "norte", name: "Norte", count: 18 },
+  { id: "sur", name: "Sur", count: 16 },
+];
+
+const timeSlots = [
+  { id: "morning", name: "Mañana", hours: "6:00 - 14:00" },
+  { id: "afternoon", name: "Tarde", hours: "14:00 - 22:00" },
+  { id: "night", name: "Noche", hours: "22:00 - 6:00" },
+];
+
+const mockEmployees = [
+  { id: 1, name: "Ana García", role: "Cajera", avatar: "AG" },
+  { id: 2, name: "Pedro López", role: "Mesero", avatar: "PL" },
+  { id: 3, name: "María Ruiz", role: "Chef", avatar: "MR" },
+  { id: 4, name: "Carlos Díaz", role: "Bartender", avatar: "CD" },
+  { id: 5, name: "Laura Sánchez", role: "Hostess", avatar: "LS" },
+  { id: 6, name: "Juan Pérez", role: "Mesero", avatar: "JP" },
+  { id: 7, name: "Sofía Torres", role: "Cajera", avatar: "ST" },
+  { id: 8, name: "Diego Morales", role: "Chef", avatar: "DM" },
+];
+
+const requests = [
+  {
+    id: 1,
+    from: "Ana García",
+    to: "Pedro López",
+    date: "2025-10-29",
+    shift: "Tarde",
+    reason: "Cita médica",
+    time: "Hace 2h",
+  },
+  {
+    id: 2,
+    from: "María Ruiz",
+    to: "Laura Sánchez",
+    date: "2025-10-31",
+    shift: "Mañana",
+    reason: "Asunto personal",
+    time: "Hace 4h",
+  },
+];
+
+// ============================================
+// UTILIDADES PARA CALENDARIO
+// ============================================
+const monthNames = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+];
+
+const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+const getDaysInMonth = (year, month) => {
+  return new Date(year, month + 1, 0).getDate();
+};
+
+const getFirstDayOfMonth = (year, month) => {
+  return new Date(year, month, 1).getDay();
+};
+
+const formatDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const isToday = (year, month, day) => {
+  const today = new Date();
   return (
-    <div className="p-8 bg-gradient-to-br from-slate-50 via-white to-teal-50/30 min-h-screen flex items-center justify-center">
-      <div className="bg-white p-8 rounded-2xl border border-slate-200/60 shadow-sm max-w-md text-center">
-        <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-slate-900 mb-4">Acceso Restringido</h2>
-        <p className="text-slate-600 mb-2">
-          No tienes permisos para acceder a la gestión completa de horarios.
-        </p>
-        <p className="text-slate-500 text-sm mb-6">
-          Este módulo está disponible solo para administradores del sistema.
-        </p>
-        <p className="text-slate-500 text-sm">
-          Si necesitas acceso, contacta al administrador del sistema.
-        </p>
-        <Button 
-          className="mt-6 bg-teal-600 hover:bg-teal-700"
-          onClick={() => window.location.href = '/mi-horario'}
-        >
-          <Eye className="w-4 h-4 mr-2" />
-          Ver Mi Horario Personal
-        </Button>
+    today.getFullYear() === year &&
+    today.getMonth() === month &&
+    today.getDate() === day
+  );
+};
+
+// ============================================
+// COMPONENTES INTERNOS
+// ============================================
+
+// Selector de Sucursal
+function BranchSelector({ selectedBranch, onBranchChange }) {
+  return (
+    <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-2 text-slate-600">
+        <Building2 className="w-5 h-5" />
+        <span className="text-sm font-semibold">Sucursal:</span>
+      </div>
+      <Tabs value={selectedBranch} onValueChange={onBranchChange} className="flex-1">
+        <TabsList className="bg-white border border-slate-200 p-1 rounded-2xl shadow-sm">
+          {branches.map((branch) => (
+            <TabsTrigger
+              key={branch.id}
+              value={branch.id}
+              className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-600 data-[state=active]:to-teal-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-teal-500/30 px-6 font-semibold transition-all duration-200"
+            >
+              {branch.name}
+              <span className="ml-2 text-xs opacity-75">({branch.count})</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+    </div>
+  );
+}
+
+// Calendario Mensual
+function MonthlyCalendar({ scheduleData, onDayClick, currentYear, currentMonth, onPrevMonth, onNextMonth }) {
+  const daysInMonth = getDaysInMonth(currentYear, currentMonth);
+  const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
+  const days = [];
+
+  // Rellenar días vacíos antes del primer día
+  for (let i = 0; i < firstDay; i++) {
+    days.push(null);
+  }
+
+  // Rellenar días del mes
+  for (let day = 1; day <= daysInMonth; day++) {
+    days.push(day);
+  }
+
+  const getShiftsForDay = (day) => {
+    if (!day) return [];
+    const dateStr = formatDate(new Date(currentYear, currentMonth, day));
+    return scheduleData[dateStr] || [];
+  };
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
+      {/* Header del Calendario */}
+      <div className="p-6 bg-gradient-to-br from-white to-teal-50/30 border-b border-slate-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <CalendarIcon className="w-6 h-6 text-teal-600" />
+            <h2 className="text-2xl font-bold text-slate-900">
+              {monthNames[currentMonth]} {currentYear}
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={onPrevMonth}
+              className="rounded-xl hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const today = new Date();
+                onDayClick(today.getFullYear(), today.getMonth());
+              }}
+              className="rounded-xl hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200 font-semibold"
+            >
+              Hoy
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={onNextMonth}
+              className="rounded-xl hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Días de la semana */}
+      <div className="grid grid-cols-7 border-b border-slate-200">
+        {dayNames.map((day) => (
+          <div
+            key={day}
+            className="p-3 text-center bg-gradient-to-br from-slate-50 to-white border-r border-slate-200 last:border-r-0"
+          >
+            <span className="text-sm font-bold text-slate-600">{day}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Grid de días */}
+      <div className="grid grid-cols-7">
+        {days.map((day, index) => {
+          const shifts = getShiftsForDay(day);
+          const today = day && isToday(currentYear, currentMonth, day);
+          
+          return (
+            <div
+              key={index}
+              className={`min-h-[120px] p-2 border-r border-b border-slate-200 last:border-r-0 ${
+                !day ? 'bg-slate-50/50' : 'bg-white hover:bg-teal-50/20 cursor-pointer'
+              } transition-colors ${today ? 'ring-2 ring-teal-500 ring-inset' : ''}`}
+              onClick={() => day && onDayClick(currentYear, currentMonth, day)}
+            >
+              {day && (
+                <>
+                  <div className={`text-sm font-bold mb-2 ${
+                    today 
+                      ? 'bg-teal-600 text-white w-7 h-7 rounded-full flex items-center justify-center' 
+                      : 'text-slate-700'
+                  }`}>
+                    {day}
+                  </div>
+                  <div className="space-y-1">
+                    {shifts.slice(0, 2).map((shift, idx) => (
+                      <div
+                        key={idx}
+                        className="text-xs p-1.5 rounded-lg bg-gradient-to-r from-teal-50 to-teal-100/50 border border-teal-200/50"
+                      >
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-teal-600" />
+                          <span className="font-semibold text-teal-700 truncate">
+                            {shift.employee.name.split(' ')[0]}
+                          </span>
+                        </div>
+                        <div className="text-xs text-teal-600 font-medium truncate">
+                          {shift.shift}
+                        </div>
+                      </div>
+                    ))}
+                    {shifts.length > 2 && (
+                      <div className="text-xs text-center text-slate-500 font-semibold bg-slate-100 rounded-lg py-1">
+                        +{shifts.length - 2} más
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-// ============================================
-// COMPONENTE DE VISUALIZACIÓN PARA EMPLEADOS
-// ============================================
-function MiHorarioPersonal() {
-  const [mySchedules, setMySchedules] = useState([]);
-  const [loading, setLoading] = useState(true);
+// Modal para Gestionar Turnos del Día
+function DayScheduleModal({ isOpen, onClose, date, shifts, onAddShift, onDeleteShift }) {
+  const [selectedEmployee, setSelectedEmployee] = useState("");
+  const [selectedShift, setSelectedShift] = useState("");
 
-  useEffect(() => {
-    loadMySchedules();
-  }, []);
-
-  const loadMySchedules = async () => {
-    try {
-      // En una app real, esto vendría de tu contexto de autenticación
-      const currentEmployeeId = localStorage.getItem('currentEmployeeId') || '1'; // Ejemplo
-      const allSchedules = await employeeScheduleService.getAllSchedules();
-      
-      // Filtrar solo los horarios del empleado actual
-      const mySchedules = allSchedules.filter(
-        schedule => schedule.employee_id.toString() === currentEmployeeId
-      );
-      
-      setMySchedules(mySchedules);
-    } catch (error) {
-      console.error("Error al cargar horarios personales:", error);
-    } finally {
-      setLoading(false);
+  const handleAdd = () => {
+    if (!selectedEmployee || !selectedShift) {
+      toast.error("Selecciona un empleado y un turno");
+      return;
     }
+
+    const employee = mockEmployees.find(e => e.id === parseInt(selectedEmployee));
+    const shift = timeSlots.find(s => s.id === selectedShift);
+
+    onAddShift({
+      employee,
+      shift: shift.name,
+      hours: shift.hours,
+      status: "active"
+    });
+
+    setSelectedEmployee("");
+    setSelectedShift("");
+    toast.success("Turno asignado correctamente");
   };
 
-  const getDiaNombre = (dia) => {
-    const diasSemana = [
-      { value: 1, label: "Lunes" },
-      { value: 2, label: "Martes" },
-      { value: 3, label: "Miércoles" },
-      { value: 4, label: "Jueves" },
-      { value: 5, label: "Viernes" },
-      { value: 6, label: "Sábado" },
-      { value: 7, label: "Domingo" }
-    ];
-    const diaObj = diasSemana.find((d) => d.value === dia);
-    return diaObj ? diaObj.label : "N/A";
-  };
-
-  const formatTimeForInput = (timeObj) => {
-    if (!timeObj) return '';
-    if (typeof timeObj === 'string') {
-      return timeObj.slice(0, 5);
-    }
-    return `${String(timeObj.hours).padStart(2, '0')}:${String(timeObj.minutes).padStart(2, '0')}`;
-  };
-
-  if (loading) {
-    return (
-      <div className="p-8 bg-gradient-to-br from-slate-50 via-white to-teal-50/30 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600">Cargando tu horario...</p>
-        </div>
-      </div>
-    );
-  }
+  if (!isOpen) return null;
 
   return (
-    <div className="p-8 bg-gradient-to-br from-slate-50 via-white to-teal-50/30 min-h-screen">
-      {/* Encabezado para empleados */}
-      <div className="mb-8 text-center">
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <Calendar className="h-8 w-8 text-teal-600" />
-          <h1 className="text-3xl font-bold text-slate-900">Mi Horario Personal</h1>
-        </div>
-        <p className="text-slate-600 font-medium">
-          Consulta tus turnos y horarios asignados
-        </p>
-      </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl rounded-2xl">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold text-slate-900">
+            Gestionar Turnos
+          </DialogTitle>
+          <DialogDescription className="text-slate-600 font-medium">
+            {date ? new Date(date).toLocaleDateString('es-ES', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            }) : ''}
+          </DialogDescription>
+        </DialogHeader>
 
-      {/* Horarios del empleado */}
-      {mySchedules.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200/60 p-8 text-center">
-          <Clock className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-slate-700 mb-2">No tienes horarios asignados</h3>
-          <p className="text-slate-500">Contacta con recursos humanos para asignarte horarios.</p>
+        {/* Formulario para agregar turno */}
+        <div className="space-y-4 py-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-semibold text-slate-700 mb-2 block">
+                Empleado
+              </label>
+              <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                <SelectTrigger className="rounded-xl border-slate-200">
+                  <SelectValue placeholder="Seleccionar empleado" />
+                </SelectTrigger>
+                <SelectContent>
+                  {mockEmployees.map((emp) => (
+                    <SelectItem key={emp.id} value={emp.id.toString()}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="w-6 h-6">
+                          <AvatarFallback className="text-xs bg-teal-100 text-teal-700">
+                            {emp.avatar}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>{emp.name} - {emp.role}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-semibold text-slate-700 mb-2 block">
+                Turno
+              </label>
+              <Select value={selectedShift} onValueChange={setSelectedShift}>
+                <SelectTrigger className="rounded-xl border-slate-200">
+                  <SelectValue placeholder="Seleccionar turno" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timeSlots.map((slot) => (
+                    <SelectItem key={slot.id} value={slot.id}>
+                      {slot.name} ({slot.hours})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <Button
+            onClick={handleAdd}
+            className="w-full bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white rounded-xl font-bold shadow-sm"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Agregar Turno
+          </Button>
         </div>
-      ) : (
-        <div className="grid gap-6 max-w-4xl mx-auto">
-          {mySchedules.map((schedule) => (
-            <div key={schedule.id} className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900">{schedule.nombre_horario}</h3>
-                  <Badge 
-                    className={`
-                      mt-2 ${schedule.es_actual 
-                        ? 'bg-emerald-500 text-white' 
-                        : 'bg-slate-200 text-slate-700'
-                      }
-                    `}
-                  >
-                    {schedule.es_actual ? 'Horario Actual' : 'Horario Inactivo'}
+
+        {/* Lista de turnos actuales */}
+        <div className="space-y-2 max-h-[300px] overflow-y-auto">
+          <h4 className="text-sm font-bold text-slate-700 mb-3">Turnos Asignados</h4>
+          {shifts && shifts.length > 0 ? (
+            shifts.map((shift, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-50 to-slate-100/50 rounded-xl border border-slate-200"
+              >
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-9 h-9 border-2 border-white shadow-sm">
+                    <AvatarFallback className="text-xs bg-gradient-to-br from-teal-100 to-teal-50 text-teal-700 font-bold">
+                      {shift.employee.avatar}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="font-bold text-slate-900">{shift.employee.name}</div>
+                    <div className="text-xs text-slate-600 font-medium">
+                      {shift.employee.role} • {shift.shift} ({shift.hours})
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onDeleteShift(index)}
+                  className="hover:bg-rose-50 hover:text-rose-600 text-slate-400 rounded-lg"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-slate-400">
+              <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p className="text-sm font-medium">No hay turnos asignados para este día</p>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="rounded-xl font-semibold"
+          >
+            Cerrar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Panel de Solicitudes
+function RequestsPanel({ requests, onApprove, onReject }) {
+  return (
+    <Card className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <ArrowRightLeft className="w-5 h-5 text-teal-600" />
+          <h3 className="font-bold text-slate-900">Solicitudes de Cambio</h3>
+        </div>
+        <Badge className="bg-gradient-to-r from-teal-600 to-teal-500 text-white font-bold shadow-sm">
+          {requests.length} pendientes
+        </Badge>
+      </div>
+      <div className="space-y-4 max-h-[500px] overflow-y-auto">
+        {requests.length > 0 ? (
+          requests.map((request) => (
+            <div
+              key={request.id}
+              className="p-4 bg-gradient-to-br from-white to-teal-50/30 border border-slate-200 rounded-xl hover:shadow-md transition-all"
+            >
+              <div className="flex items-start gap-3 mb-3">
+                <Avatar className="w-8 h-8 border-2 border-white shadow-sm">
+                  <AvatarFallback className="text-xs bg-gradient-to-br from-teal-600 to-teal-500 text-white font-bold">
+                    {request.from.split(" ").map(n => n[0]).join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="text-sm font-bold text-slate-900">{request.from}</div>
+                  <div className="text-xs text-slate-500 flex items-center gap-1 mt-1 font-medium">
+                    <Clock className="w-3 h-3" />
+                    {request.time}
+                  </div>
+                </div>
+              </div>
+              <div className="ml-11 space-y-2 mb-4">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-slate-500 font-medium">Cambio con:</span>
+                  <span className="text-slate-900 font-bold">{request.to}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-slate-500 font-medium">Fecha:</span>
+                  <span className="text-slate-900 font-bold">
+                    {new Date(request.date).toLocaleDateString('es-ES')}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-slate-500 font-medium">Turno:</span>
+                  <Badge className="bg-blue-100 text-blue-700 text-xs font-bold border border-blue-200">
+                    {request.shift}
                   </Badge>
                 </div>
-                <Badge variant="outline" className="border-teal-200 text-teal-700 text-lg px-4 py-2">
-                  {getDiaNombre(schedule.dia_semana)}
-                </Badge>
+                <div className="text-xs text-slate-600 italic font-medium">
+                  Motivo: {request.reason}
+                </div>
               </div>
-              
-              <div className="flex items-center gap-4 text-slate-700">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-teal-600" />
-                  <span className="font-semibold">Inicio:</span>
-                  <span className="text-lg">{formatTimeForInput(schedule.hora_inicio_patron)}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-teal-600" />
-                  <span className="font-semibold">Fin:</span>
-                  <span className="text-lg">{formatTimeForInput(schedule.hora_fin_patron)}</span>
-                </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => onApprove(request.id)}
+                  className="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-xl font-bold shadow-sm"
+                >
+                  <Check className="w-4 h-4 mr-1" />
+                  Aprobar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onReject(request.id)}
+                  className="flex-1 border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl font-bold"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Rechazar
+                </Button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        ) : (
+          <div className="text-center py-8 text-slate-400">
+            <ArrowRightLeft className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <p className="text-sm font-medium">No hay solicitudes pendientes</p>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+// Resumen de Estadísticas
+function ScheduleSummary({ scheduleData }) {
+  const totalShifts = Object.values(scheduleData).reduce((sum, shifts) => sum + shifts.length, 0);
+  const activeEmployees = new Set(
+    Object.values(scheduleData).flatMap(shifts => shifts.map(s => s.employee.id))
+  ).size;
+
+  const stats = [
+    {
+      icon: Users,
+      label: "Empleados Activos",
+      value: activeEmployees.toString(),
+      change: "+3",
+      color: "from-teal-600 to-teal-500",
+      bgColor: "from-teal-50 to-teal-100/50",
+    },
+    {
+      icon: UserCheck,
+      label: "Turnos Asignados",
+      value: totalShifts.toString(),
+      change: "+12",
+      color: "from-emerald-600 to-emerald-500",
+      bgColor: "from-emerald-50 to-emerald-100/50",
+    },
+    {
+      icon: AlertCircle,
+      label: "Reemplazos",
+      value: "8",
+      change: "-2",
+      color: "from-yellow-600 to-yellow-500",
+      bgColor: "from-yellow-50 to-yellow-100/50",
+    },
+    {
+      icon: Clock,
+      label: "Pendientes",
+      value: "3",
+      change: "0",
+      color: "from-purple-600 to-purple-500",
+      bgColor: "from-purple-50 to-purple-100/50",
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {stats.map((stat, index) => {
+        const Icon = stat.icon;
+        return (
+          <Card
+            key={index}
+            className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group"
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.bgColor} flex items-center justify-center group-hover:scale-110 transition-transform duration-200 border border-slate-200/50`}>
+                <Icon className="w-6 h-6 text-teal-600" />
+              </div>
+              <div className={`px-2 py-1 rounded-lg text-xs font-bold ${
+                stat.change.startsWith('+') 
+                  ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' 
+                  : stat.change.startsWith('-')
+                  ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                  : 'bg-slate-100 text-slate-600 border border-slate-200'
+              }`}>
+                {stat.change !== "0" && stat.change}
+                {stat.change === "0" && "Sin cambios"}
+              </div>
+            </div>
+            <div className="text-3xl font-bold text-slate-900 mb-1">{stat.value}</div>
+            <div className="text-sm text-slate-600 font-semibold">{stat.label}</div>
+          </Card>
+        );
+      })}
     </div>
   );
 }
 
 // ============================================
-// COMPONENTE PRINCIPAL MODIFICADO
+// COMPONENTE PRINCIPAL
 // ============================================
 export default function GestionHorariosContent() {
-  const [userRole, setUserRole] = useState(null);
-  const [loading, setLoading] = useState(true);
-  
-  // Estados para administradores
-  const [schedules, setSchedules] = useState([]);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [scheduleToDelete, setScheduleToDelete] = useState(null);
-  const [formData, setFormData] = useState({
-    id: null,
-    employee_id: "",
-    nombre_horario: "",
-    dia_semana: "",
-    hora_inicio_patron: "",
-    hora_fin_patron: "",
-    es_actual: true
-  });
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterDia, setFilterDia] = useState("todos");
+  const today = new Date();
+  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
+  const [selectedBranch, setSelectedBranch] = useState("central");
+  const [pendingRequests, setPendingRequests] = useState(requests);
+  const [scheduleData, setScheduleData] = useState({});
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
 
-  // Verificar permisos del usuario
-  useEffect(() => {
-    const checkPermissions = async () => {
-      // En una app real, esto vendría de tu contexto de autenticación
-      setTimeout(() => {
-        const userIsAdmin = localStorage.getItem('userRole') === 'admin';
-        // const userIsAdmin = false; // Para probar como empleado normal
-        setUserRole(userIsAdmin ? 'admin' : 'employee');
-        setLoading(false);
-        
-        // Si es admin, cargar los datos
-        if (userIsAdmin) {
-          loadSchedules();
-        }
-      }, 500);
-    };
+  const handleBranchChange = (branchId) => {
+    setSelectedBranch(branchId);
+    toast.info(`Cambiado a sucursal: ${branches.find(b => b.id === branchId)?.name}`);
+  };
 
-    checkPermissions();
-  }, []);
-
-  // 🔹 Solo para administradores
-  const diasSemana = [
-    { value: 1, label: "Lunes" },
-    { value: 2, label: "Martes" },
-    { value: 3, label: "Miércoles" },
-    { value: 4, label: "Jueves" },
-    { value: 5, label: "Viernes" },
-    { value: 6, label: "Sábado" },
-    { value: 7, label: "Domingo" }
-  ];
-
-  const loadSchedules = async () => {
-    try {
-      const data = await employeeScheduleService.getAllSchedules();
-      setSchedules(data);
-    } catch (error) {
-      console.error("Error al cargar horarios:", error);
+  const handlePrevMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
     }
   };
 
-  const filteredSchedules = schedules.filter((schedule) => {
-    const matchSearch =
-      schedule.nombre_horario?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      schedule.employee_id?.toString().includes(searchTerm);
-    const matchDia = filterDia === "todos" || schedule.dia_semana === parseInt(filterDia);
-    return matchSearch && matchDia;
-  });
+  const handleNextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+  };
 
-  const resetForm = () => {
-    setFormData({
-      id: null,
-      employee_id: "",
-      nombre_horario: "",
-      dia_semana: "",
-      hora_inicio_patron: "",
-      hora_fin_patron: "",
-      es_actual: true
+  const handleDayClick = (year, month, day) => {
+    if (day) {
+      const dateStr = formatDate(new Date(year, month, day));
+      setSelectedDate(dateStr);
+      setModalOpen(true);
+    } else {
+      // Si no hay día, es el botón "Hoy"
+      setCurrentYear(year);
+      setCurrentMonth(month);
+    }
+  };
+
+  const handleAddShift = (shift) => {
+    setScheduleData(prev => ({
+      ...prev,
+      [selectedDate]: [...(prev[selectedDate] || []), shift]
+    }));
+  };
+
+  const handleDeleteShift = (index) => {
+    setScheduleData(prev => ({
+      ...prev,
+      [selectedDate]: prev[selectedDate].filter((_, i) => i !== index)
+    }));
+    toast.success("Turno eliminado correctamente");
+  };
+
+  const handleApprove = (requestId) => {
+    setPendingRequests(prev => prev.filter(r => r.id !== requestId));
+    toast.success("Solicitud aprobada correctamente", {
+      description: "El cambio de turno ha sido confirmado"
     });
-    setIsEditing(false);
-    setIsFormOpen(false);
   };
 
-  const formatTimeForInput = (timeObj) => {
-    if (!timeObj) return '';
-    if (typeof timeObj === 'string') {
-      return timeObj.slice(0, 5);
-    }
-    return `${String(timeObj.hours).padStart(2, '0')}:${String(timeObj.minutes).padStart(2, '0')}`;
+  const handleReject = (requestId) => {
+    setPendingRequests(prev => prev.filter(r => r.id !== requestId));
+    toast.error("Solicitud rechazada", {
+      description: "El empleado será notificado"
+    });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (
-      !formData.employee_id ||
-      !formData.nombre_horario ||
-      !formData.dia_semana ||
-      !formData.hora_inicio_patron ||
-      !formData.hora_fin_patron
-    ) {
-      console.log("Por favor completa todos los campos");
-      return;
-    }
-
-    try {
-      const scheduleData = {
-        employee_id: parseInt(formData.employee_id),
-        nombre_horario: formData.nombre_horario,
-        dia_semana: parseInt(formData.dia_semana),
-        hora_inicio_patron: formData.hora_inicio_patron + ":00",
-        hora_fin_patron: formData.hora_fin_patron + ":00",
-        es_actual: formData.es_actual
-      };
-
-      if (isEditing) {
-        await employeeScheduleService.updateSchedule(formData.id, scheduleData);
-        console.log("Horario actualizado correctamente");
-      } else {
-        await employeeScheduleService.createSchedule(scheduleData);
-        console.log("Horario creado correctamente");
-      }
-
-      resetForm();
-      loadSchedules();
-    } catch (error) {
-      console.error("Error al guardar horario:", error);
-    }
-  };
-
-  const handleEdit = async (schedule) => {
-    try {
-      const fullSchedule = await employeeScheduleService.getScheduleById(schedule.id);
-      
-      setFormData({
-        id: fullSchedule.id,
-        employee_id: fullSchedule.employee_id.toString(),
-        nombre_horario: fullSchedule.nombre_horario,
-        dia_semana: fullSchedule.dia_semana.toString(),
-        hora_inicio_patron: formatTimeForInput(fullSchedule.hora_inicio_patron),
-        hora_fin_patron: formatTimeForInput(fullSchedule.hora_fin_patron),
-        es_actual: fullSchedule.es_actual
-      });
-      
-      setIsEditing(true);
-      setIsFormOpen(true);
-    } catch (error) {
-      console.error("Error al cargar horario para editar:", error);
-    }
-  };
-
-  const handleDeleteClick = (schedule) => {
-    setScheduleToDelete(schedule);
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    try {
-      await employeeScheduleService.deleteSchedule(scheduleToDelete.id);
-      console.log("Horario eliminado correctamente");
-      setDeleteDialogOpen(false);
-      setScheduleToDelete(null);
-      loadSchedules();
-    } catch (error) {
-      console.error("Error al eliminar horario:", error);
-    }
-  };
-
-  const handleCreateAllDays = async () => {
-    if (!formData.employee_id || !formData.nombre_horario || 
-        !formData.hora_inicio_patron || !formData.hora_fin_patron) {
-      console.log("Por favor completa los campos básicos primero");
-      return;
-    }
-
-    try {
-      const baseData = {
-        employee_id: parseInt(formData.employee_id),
-        nombre_horario: formData.nombre_horario,
-        hora_inicio_patron: formData.hora_inicio_patron + ":00",
-        hora_fin_patron: formData.hora_fin_patron + ":00",
-        es_actual: formData.es_actual
-      };
-
-      const promises = diasSemana.map(dia => {
-        const scheduleData = {
-          ...baseData,
-          dia_semana: dia.value,
-          nombre_horario: `${baseData.nombre_horario} - ${dia.label}`
-        };
-        return employeeScheduleService.createSchedule(scheduleData);
-      });
-
-      await Promise.all(promises);
-      console.log("Horarios creados para todos los días");
-      resetForm();
-      loadSchedules();
-    } catch (error) {
-      console.error("Error creando horarios para todos los días:", error);
-    }
-  };
-
-  const getDiaNombre = (dia) => {
-    const diaObj = diasSemana.find((d) => d.value === dia);
-    return diaObj ? diaObj.label : "N/A";
-  };
-
-  // ============================================
-  // RENDER PRINCIPAL CON CONTROL DE ACCESO
-  // ============================================
-  if (loading) {
-    return (
-      <div className="p-8 bg-gradient-to-br from-slate-50 via-white to-teal-50/30 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600">Verificando permisos...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Si no es admin, mostrar acceso restringido o su horario personal
-  if (userRole !== 'admin') {
-    return <MiHorarioPersonal />;
-    // O si quieres mostrar acceso denegado en lugar del horario personal:
-    // return <AccesoDenegado />;
-  }
-
-  // ============================================
-  // INTERFAZ DE ADMINISTRADOR (tu código original)
-  // ============================================
   return (
     <div className="p-8 bg-gradient-to-br from-slate-50 via-white to-teal-50/30 min-h-screen">
-      <Toaster position="top-right" richColors />
-
       {/* Encabezado */}
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2 tracking-tight">
-            Gestión de Horarios
-          </h1>
-          <p className="text-slate-600 font-medium">
-            Administra los turnos y horarios del personal
-          </p>
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2 tracking-tight">
+              Gestión de Horarios
+            </h1>
+            <p className="text-slate-600 font-medium">
+              Administra los turnos y horarios de tu equipo
+            </p>
+          </div>
         </div>
-        <Button
-          onClick={() => setIsFormOpen(true)}
-          className="bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white shadow-lg shadow-teal-500/30 hover:shadow-xl hover:shadow-teal-500/40 transition-all duration-300 font-semibold px-6 py-2.5 rounded-xl border border-teal-400/20"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Nuevo Horario
-        </Button>
-      </div>
 
-      {/* ... (el resto de tu código original para administradores) */}
+        {/* Resumen de Estadísticas */}
+        <div className="mb-8">
+          <ScheduleSummary scheduleData={scheduleData} />
+        </div>
 
-      {/* Filtros */}
-      <div className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm mb-6 flex flex-col md:flex-row gap-4">
-        <Input
-          type="text"
-          placeholder="Buscar por nombre o ID empleado..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 border-slate-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+        {/* Selector de Sucursal */}
+        <BranchSelector 
+          selectedBranch={selectedBranch}
+          onBranchChange={handleBranchChange}
         />
-        <Select value={filterDia} onValueChange={setFilterDia}>
-          <SelectTrigger className="border-slate-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100">
-            <SelectValue placeholder="Filtrar por día" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos los días</SelectItem>
-            {diasSemana.map((dia) => (
-              <SelectItem key={dia.value} value={dia.value.toString()}>
-                {dia.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
-      {/* Formulario */}
-      {isFormOpen && (
-        <div className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm mb-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-slate-700 font-medium">ID Empleado *</label>
-                <Input
-                  type="number"
-                  value={formData.employee_id}
-                  onChange={(e) =>
-                    setFormData({ ...formData, employee_id: e.target.value })
-                  }
-                  className="mt-1"
-                  placeholder="Ej: 123"
-                />
-              </div>
-              <div>
-                <label className="text-slate-700 font-medium">Nombre del Horario *</label>
-                <Input
-                  type="text"
-                  value={formData.nombre_horario}
-                  onChange={(e) =>
-                    setFormData({ ...formData, nombre_horario: e.target.value })
-                  }
-                  className="mt-1"
-                  placeholder="Ej: Turno Mañana"
-                />
-              </div>
-              <div>
-                <label className="text-slate-700 font-medium">Día de la Semana *</label>
-                <Select
-                  value={formData.dia_semana}
-                  onValueChange={(v) =>
-                    setFormData({ ...formData, dia_semana: v })
-                  }
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Seleccionar día" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {diasSemana.map((dia) => (
-                      <SelectItem key={dia.value} value={dia.value.toString()}>
-                        {dia.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-slate-700 font-medium">Hora Inicio *</label>
-                <Input
-                  type="time"
-                  value={formData.hora_inicio_patron}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      hora_inicio_patron: e.target.value
-                    })
-                  }
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="text-slate-700 font-medium">Hora Fin *</label>
-                <Input
-                  type="time"
-                  value={formData.hora_fin_patron}
-                  onChange={(e) =>
-                    setFormData({ ...formData, hora_fin_patron: e.target.value })
-                  }
-                  className="mt-1"
-                />
-              </div>
-              <div className="flex items-center gap-2 pt-6">
-                <input
-                  type="checkbox"
-                  checked={formData.es_actual}
-                  onChange={(e) =>
-                    setFormData({ ...formData, es_actual: e.target.checked })
-                  }
-                  className="w-4 h-4 text-teal-600 border-slate-300 rounded focus:ring-teal-500"
-                />
-                <label className="text-slate-700 font-medium">Horario actual</label>
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-4 flex-wrap">
-              <Button type="submit" className="bg-teal-600 hover:bg-teal-700 text-white">
-                <Save className="w-4 h-4 mr-2" />
-                {isEditing ? "Actualizar" : "Guardar"}
-              </Button>
-              
-              {!isEditing && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCreateAllDays}
-                  disabled={!formData.employee_id || !formData.nombre_horario || 
-                           !formData.hora_inicio_patron || !formData.hora_fin_patron}
-                  className="border-teal-200 text-teal-700 hover:bg-teal-50"
-                >
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Crear para todos los días
-                </Button>
-              )}
-              
-              <Button
-                type="button"
-                variant="outline"
-                onClick={resetForm}
-                className="border-slate-300"
-              >
-                <X className="w-4 h-4 mr-2" /> Cancelar
-              </Button>
-            </div>
-          </form>
+      {/* Grid Principal */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Calendario - 2 columnas */}
+        <div className="lg:col-span-2">
+          <MonthlyCalendar 
+            scheduleData={scheduleData}
+            onDayClick={handleDayClick}
+            currentYear={currentYear}
+            currentMonth={currentMonth}
+            onPrevMonth={handlePrevMonth}
+            onNextMonth={handleNextMonth}
+          />
         </div>
-      )}
 
-      {/* Tabla */}
-      <div className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Empleado</TableHead>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Día</TableHead>
-              <TableHead>Horario</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredSchedules.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-slate-500 py-8">
-                  <div className="flex flex-col items-center justify-center">
-                    <Clock className="w-12 h-12 text-slate-300 mb-2" />
-                    <p>No se encontraron horarios</p>
-                    <p className="text-sm text-slate-400">
-                      {searchTerm || filterDia !== "todos" 
-                        ? "Intenta con otros términos de búsqueda" 
-                        : "Comienza creando un nuevo horario"}
-                    </p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredSchedules.map((schedule) => (
-                <TableRow key={schedule.id} className="hover:bg-slate-50/50">
-                  <TableCell className="font-medium">#{schedule.id}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="bg-teal-500 text-white h-8 w-8">
-                        <AvatarFallback className="bg-teal-500 text-white text-xs">
-                          <User className="w-3 h-3" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">ID: {schedule.employee_id}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">{schedule.nombre_horario}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="border-slate-200 text-slate-700">
-                      {getDiaNombre(schedule.dia_semana)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <Clock className="w-4 h-4" />
-                      {formatTimeForInput(schedule.hora_inicio_patron)} - {formatTimeForInput(schedule.hora_fin_patron)}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {schedule.es_actual ? (
-                      <Badge className="bg-emerald-500 text-white">
-                        <CheckCircle2 className="w-3 h-3 mr-1" />
-                        Activo
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="border-slate-300 text-slate-600">
-                        <XCircle className="w-3 h-3 mr-1" />
-                        Inactivo
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex gap-2 justify-end">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(schedule)}
-                        className="hover:text-teal-600 hover:bg-teal-50"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteClick(schedule)}
-                        className="hover:text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        {/* Panel de Solicitudes - 1 columna */}
+        <div>
+          <RequestsPanel 
+            requests={pendingRequests}
+            onApprove={handleApprove}
+            onReject={handleReject}
+          />
+        </div>
       </div>
 
-      {/* Confirmar eliminación */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar horario?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se eliminará permanentemente el horario "{scheduleToDelete?.nombre_horario}" 
-              del empleado ID: {scheduleToDelete?.employee_id}.
-              <br />
-              <span className="text-red-500 font-medium">Esta acción no se puede deshacer.</span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Modal de Gestión de Turnos */}
+      <DayScheduleModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        date={selectedDate}
+        shifts={scheduleData[selectedDate] || []}
+        onAddShift={handleAddShift}
+        onDeleteShift={handleDeleteShift}
+      />
+
+      <Toaster />
     </div>
   );
 }

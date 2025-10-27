@@ -9,7 +9,7 @@ const mainModules = [
   { id: "gestionAdministrativa", label: "Gestión y Nómina", icon: Users },
   { id: "reclutamiento", label: "Reclutamiento", icon: UserPlus },
   { id: "capacitacion", label: "Capacitación", icon: GraduationCap },
-  { id: "registrarEmpleado", label: "Registrar Empleado", icon: UserPlus },
+  { id: "horario", label: "Horarios", icon: UserPlus },
   { id: "cumplimiento", label: "Cumplimiento Legal", icon: Shield },
 ];
 

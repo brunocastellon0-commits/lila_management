@@ -6,6 +6,7 @@ import { Button } from "../assets/components/ui/button";
 // IMPORTAR COMPONENTES
 // ============================================
 import { Sidebar } from "../assets/components/rh/sidebar";
+import { Header } from "../assets/components/rh/header";
 import GestionNominaContent from "../assets/components/rh/gestion_nomina";
 import { RegistrarEmpleadoForm } from "../assets/components/rh/registrar_Empleado_form";
 import ScheduleContent from "../assets/components/rh/schedule_employee";
@@ -43,39 +44,6 @@ function AccesoDenegado() {
         </div>
       </main>
     </div>
-  );
-}
-
-// ============================================
-// HEADER COMPONENT
-// ============================================
-function Header({ pageTitle, pageSubtitle, onMenuClick }) {
-  return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            onClick={onMenuClick}
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">{pageTitle}</h1>
-            <p className="text-sm text-gray-500">{pageSubtitle}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </Button>
-        </div>
-      </div>
-    </header>
   );
 }
 
@@ -199,7 +167,7 @@ function PlaceholderContent({ title, icon: Icon }) {
 export default function Rrhh() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeModule, setActiveModule] = useState("dashboard");
-  const [showRegistrarEmpleado, setShowRegistrarEmpleado] = useState(false);
+ 
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -231,25 +199,14 @@ export default function Rrhh() {
 
   const handleModuleSelect = (moduleId) => {
     if (!userRole || userRole !== 'admin') return;
-    
-    if (moduleId === "registrarEmpleado") {
-      setShowRegistrarEmpleado(true);
-    } else {
-      setActiveModule(moduleId);
-      setSidebarOpen(false);
-    }
+
+    setActiveModule(moduleId);
+    setSidebarOpen(false);
   };
 
   const handleMenuClick = () => {
     if (!userRole || userRole !== 'admin') return;
     setSidebarOpen(!sidebarOpen);
-  };
-
-  const closeRegistrarEmpleado = () => setShowRegistrarEmpleado(false);
-
-  const handleEmployeeRegistered = (newEmployee) => {
-    console.log("Empleado registrado:", newEmployee);
-    closeRegistrarEmpleado();
   };
 
   // Función para renderizar el contenido según permisos
@@ -286,7 +243,7 @@ export default function Rrhh() {
         return <PlaceholderContent title="Configuración" icon={Settings} />;
       case "ayuda":
         return <PlaceholderContent title="Ayuda" icon={HelpCircle} />;
-      case "schedule":
+      case "horario":
         return <ScheduleContent />;
       default:
         return <DashboardContent />;
@@ -340,33 +297,6 @@ export default function Rrhh() {
           renderContent()
         )}
       </div>
-
-      {/* Modal de Registrar Empleado - Solo si es admin */}
-      {userRole === 'admin' && showRegistrarEmpleado && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-300"
-            onClick={closeRegistrarEmpleado}
-          ></div>
-          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg transform transition-all duration-300 scale-100 max-h-[90vh] overflow-hidden">
-            <button
-              className="absolute top-4 right-4 z-10 text-gray-500 hover:text-gray-800 bg-white rounded-full p-1 shadow-sm hover:shadow-md transition"
-              onClick={closeRegistrarEmpleado}
-              aria-label="Cerrar"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <div className="overflow-y-auto max-h-[90vh]">
-              <RegistrarEmpleadoForm 
-                onSuccess={handleEmployeeRegistered}
-                onCancel={closeRegistrarEmpleado}
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
