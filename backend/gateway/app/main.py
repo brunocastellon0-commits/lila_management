@@ -9,7 +9,8 @@ app = FastAPI(
     title="API Gateway - Sistema LILA",
     description="Gateway central para microservicios",
     version="1.0.0",
-    debug=settings.debug
+    debug=settings.debug,
+    redirect_slashes=False 
 )
 
 # Configuración de CORS

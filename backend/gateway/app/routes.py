@@ -1,3 +1,4 @@
+# gateway/app/routes.py - VERSIÓN CORREGIDA
 from fastapi import APIRouter, Request, HTTPException, status
 from fastapi.responses import JSONResponse
 import httpx
@@ -5,7 +6,7 @@ from typing import Optional, Any
 import json
 from gateway.app.config import settings
 
-# ✅ SOLUCIÓN: Deshabilitar trailing slash redirect
+# ✅ CRÍTICO: redirect_slashes=False para evitar 307
 router = APIRouter(redirect_slashes=False)
 
 # ========================================
@@ -43,16 +44,28 @@ async def forward_request(
                 params=params
             )
 
-            # ✅ CORRECCIÓN: Manejar respuestas vacías y errores de JSON
-            if response.status_code == 204 or not response.content:
+            # ✅ CORRECCIÓN CRÍTICA: Manejar respuestas vacías correctamente
+            if response.status_code == 204:
                 content = None
+            elif not response.content or len(response.content) == 0:
+                # Para endpoints de listas, devolver array vacío
+                if any(x in url for x in ['/sucursales', '/employees', '/schedules', '/roles']):
+                    content = []
+                else:
+                    content = None
             else:
                 try:
                     content = response.json()
-                except Exception:
-                    content = {"detail": response.text if response.text else "Empty response"}
+                    # ✅ Si el JSON es null, convertir a array vacío para endpoints de lista
+                    if content is None:
+                        if any(x in url for x in ['/sucursales', '/employees', '/schedules', '/roles']):
+                            content = []
+                except json.JSONDecodeError:
+                    content = {"detail": response.text if response.text else "Invalid JSON response"}
+                except Exception as e:
+                    content = {"detail": f"Error parsing response: {str(e)}"}
             
-            # ✅ CORRECCIÓN: No incluir headers del microservicio, solo CORS
+            # ✅ Headers CORS consistentes
             cors_headers = {
                 "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
@@ -84,7 +97,66 @@ async def forward_request(
 
 
 # ========================================
-# RUTAS DE EMPLEADOS - SIN BARRA FINAL
+# RUTAS DE SUCURSALES - SIN BARRA FINAL
+# ========================================
+
+@router.post("/sucursales", status_code=201)
+async def create_sucursal_via_gateway(request: Request):
+    """Crea una nueva sucursal."""
+    data = await request.json()
+    return await forward_request(
+        "POST",
+        f"{settings.rh_service_url}/sucursales",
+        data=data,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.get("/sucursales")
+async def read_all_sucursales_via_gateway(request: Request):
+    """Obtiene la lista paginada de todas las sucursales."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/sucursales",
+        params=dict(request.query_params),
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.get("/sucursales/{sucursal_id}")
+async def read_sucursal_by_id_via_gateway(sucursal_id: int, request: Request):
+    """Obtiene una sucursal específica por ID."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/sucursales/{sucursal_id}",
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.put("/sucursales/{sucursal_id}")
+async def update_sucursal_via_gateway(sucursal_id: int, request: Request):
+    """Actualiza completamente los datos de una sucursal."""
+    data = await request.json()
+    return await forward_request(
+        "PUT",
+        f"{settings.rh_service_url}/sucursales/{sucursal_id}",
+        data=data,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.delete("/sucursales/{sucursal_id}", status_code=204)
+async def delete_sucursal_via_gateway(sucursal_id: int, request: Request):
+    """Elimina una sucursal por ID."""
+    return await forward_request(
+        "DELETE",
+        f"{settings.rh_service_url}/sucursales/{sucursal_id}",
+        headers=dict(request.headers.items()),
+    )
+
+
+# ========================================
+# RUTAS DE EMPLEADOS
 # ========================================
 
 @router.post("/employees", status_code=201)
@@ -105,7 +177,7 @@ async def read_all_employees_via_gateway(request: Request):
     return await forward_request(
         "GET",
         f"{settings.rh_service_url}/employees",
-        params=request.query_params,
+        params=dict(request.query_params),
         headers=dict(request.headers.items()),
     )
 
@@ -140,113 +212,10 @@ async def delete_employee_via_gateway(employee_id: int, request: Request):
         f"{settings.rh_service_url}/employees/{employee_id}",
         headers=dict(request.headers.items()),
     )
-    
-@router.post("/employees-with-user", status_code=201)
-async def create_employee_with_user(request: Request):
-    """
-    Crea un nuevo empleado y su usuario automáticamente.
-    """
-    data = await request.json()
-    
-    try:
-        # 1. Primero crear el empleado en RH service
-        employee_response = await forward_request(
-            "POST",
-            f"{settings.rh_service_url}/employees",
-            data=data,
-            headers=dict(request.headers.items()),
-        )
-        
-        # Si el empleado se creó exitosamente
-        if employee_response.status_code == 201:
-            # ✅ CORRECCIÓN: Obtener el contenido directamente del JSONResponse
-            employee_content = employee_response.body
-            employee_data = json.loads(employee_content.decode()) if employee_content else {}
-            
-            # 2. Crear el usuario en User service
-# En gateway/app/routes.py - ya está usando data.get("password")
-            user_data = {
-                "username": f"{data.get('nombre', '').lower()}.{data.get('apellido', '').lower()}",
-                "email": data.get("email"),
-                "password": data.get("password"),  # ← USA LA CONTRASEÑA DEL FORMULARIO
-                "role": get_role_name(data.get("rol_id")),
-                "employee_id": employee_data.get("id")
-            }
-            
-            user_response = await forward_request(
-                "POST",
-                f"{settings.user_service_url}/auth/register-employee",
-                data=user_data,
-                headers=dict(request.headers.items()),
-            )
-            
-            # Combinar respuestas
-            if user_response.status_code == 201:
-                # ✅ CORRECCIÓN: Obtener contenido del user_response
-                user_content = user_response.body
-                user_data_response = json.loads(user_content.decode()) if user_content else {}
-                
-                employee_data["user"] = user_data_response
-                return JSONResponse(content=employee_data, status_code=201)
-            else:
-                # Si falla crear usuario, eliminar el empleado (rollback)
-                await forward_request(
-                    "DELETE",
-                    f"{settings.rh_service_url}/employees/{employee_data['id']}",
-                    headers=dict(request.headers.items()),
-                )
-                return user_response
-        
-        return employee_response
-        
-    except Exception as e:
-        # Manejo de errores generales
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error en la creación coordinada: {str(e)}"
-        )
-
-
-# Función auxiliar para convertir ID de rol a nombre
-def get_role_name(rol_id: int) -> str:
-    role_mapping = {
-        1: "employee",
-        2: "admin", 
-        3: "manager",
-        4: "supervisor"
-    }
-    return role_mapping.get(rol_id, "employee")
 
 
 # ========================================
-# RUTAS DE DOCUMENTOS
-# ========================================
-
-@router.post("/documents/employees/{employee_id}/documents", status_code=201)
-async def create_document_for_employee_via_gateway(employee_id: int, request: Request):
-    """Registra un nuevo documento para un empleado."""
-    data = await request.json()
-    return await forward_request(
-        "POST",
-        f"{settings.rh_service_url}/documents/employees/{employee_id}/documents",
-        data=data,
-        headers=dict(request.headers.items()),
-    )
-
-
-@router.get("/documents")
-async def read_documents_via_gateway(request: Request):
-    """Obtiene todos los documentos."""
-    return await forward_request(
-        "GET",
-        f"{settings.rh_service_url}/documents",
-        params=request.query_params,
-        headers=dict(request.headers.items()),
-    )
-
-
-# ========================================
-# RUTAS DE HORARIOS
+# RUTAS DE HORARIOS (SCHEDULES)
 # ========================================
 
 @router.post("/schedules", status_code=201)
@@ -267,14 +236,84 @@ async def read_schedules_via_gateway(request: Request):
     return await forward_request(
         "GET",
         f"{settings.rh_service_url}/schedules",
-        params=request.query_params,
+        params=dict(request.query_params),
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.delete("/schedules/{schedule_id}", status_code=204)
+async def delete_schedule_via_gateway(schedule_id: int, request: Request):
+    """Elimina un horario por ID."""
+    return await forward_request(
+        "DELETE",
+        f"{settings.rh_service_url}/schedules/{schedule_id}",
         headers=dict(request.headers.items()),
     )
 
 
 # ========================================
-# RUTAS DE SOLICITUDES (REQUEST)
+# RUTAS DE ROLES
 # ========================================
+
+@router.post("/roles", status_code=201)
+async def create_role_via_gateway(request: Request):
+    """Crea un nuevo rol."""
+    data = await request.json()
+    return await forward_request(
+        "POST",
+        f"{settings.rh_service_url}/roles",
+        data=data,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.get("/roles")
+async def read_all_roles_via_gateway(request: Request):
+    """Obtiene la lista paginada de todos los roles."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/roles",
+        params=dict(request.query_params),
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.get("/roles/{role_id}")
+async def read_role_by_id_via_gateway(role_id: int, request: Request):
+    """Obtiene un rol específico por ID."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/roles/{role_id}",
+        headers=dict(request.headers.items()),
+    )
+
+
+# ========================================
+# OTRAS RUTAS (DOCUMENTOS, TURNOS, ETC)
+# ========================================
+
+@router.post("/documents/employees/{employee_id}/documents", status_code=201)
+async def create_document_for_employee_via_gateway(employee_id: int, request: Request):
+    """Registra un nuevo documento para un empleado."""
+    data = await request.json()
+    return await forward_request(
+        "POST",
+        f"{settings.rh_service_url}/documents/employees/{employee_id}/documents",
+        data=data,
+        headers=dict(request.headers.items()),
+    )
+
+
+@router.get("/documents")
+async def read_documents_via_gateway(request: Request):
+    """Obtiene todos los documentos."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/documents",
+        params=dict(request.query_params),
+        headers=dict(request.headers.items()),
+    )
+
 
 @router.post("/request", status_code=201)
 async def create_request_via_gateway(request: Request):
@@ -294,14 +333,10 @@ async def read_requests_via_gateway(request: Request):
     return await forward_request(
         "GET",
         f"{settings.rh_service_url}/request",
-        params=request.query_params,
+        params=dict(request.query_params),
         headers=dict(request.headers.items()),
     )
 
-
-# ========================================
-# RUTAS DE TURNOS (SHIFT)
-# ========================================
 
 @router.post("/shift", status_code=201)
 async def create_shift_via_gateway(request: Request):
@@ -321,14 +356,10 @@ async def read_shifts_via_gateway(request: Request):
     return await forward_request(
         "GET",
         f"{settings.rh_service_url}/shift",
-        params=request.query_params,
+        params=dict(request.query_params),
         headers=dict(request.headers.items()),
     )
 
-
-# ========================================
-# RUTAS DE CAPACITACIÓN (TRAINING)
-# ========================================
 
 @router.post("/training", status_code=201)
 async def create_training_via_gateway(request: Request):
@@ -348,6 +379,6 @@ async def read_trainings_via_gateway(request: Request):
     return await forward_request(
         "GET",
         f"{settings.rh_service_url}/training",
-        params=request.query_params,
+        params=dict(request.query_params),
         headers=dict(request.headers.items()),
     )

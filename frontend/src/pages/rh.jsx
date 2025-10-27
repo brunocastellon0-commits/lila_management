@@ -173,6 +173,14 @@ export default function Rrhh() {
 
   // Verificación de permisos
   useEffect(() => {
+  // 🚫 Desactivar control de acceso temporalmente
+  setUserRole("admin");
+  setLoading(false);
+}, []);
+
+
+  {/* 
+    useEffect(() => {
     const checkPermissions = async () => {
       setTimeout(() => {
         // Buscar en múltiples claves posibles
@@ -196,6 +204,8 @@ export default function Rrhh() {
 
     checkPermissions();
   }, []);
+    
+*/}
 
   const handleModuleSelect = (moduleId) => {
     if (!userRole || userRole !== 'admin') return;

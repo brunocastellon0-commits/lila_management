@@ -8,7 +8,8 @@ app = FastAPI(
     title="RH Service API",
     description="Microservicio para la gestión de Recursos Humanos (HR).",
     version="1.0.0",
-    debug=settings.DEBUG
+    debug=settings.DEBUG,
+    redirect_slashes=False
 )
 
 # 2. Configuración del Middleware CORS 
