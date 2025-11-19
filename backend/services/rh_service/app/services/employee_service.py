@@ -7,7 +7,7 @@ from typing import List
 
 # Importa el modelo ORM (tabla) y los schemas Pydantic
 from app.models.employee import Employee
-from app.schemas.schema_employee import EmployeeCreate, EmployeeUpdate
+from app.schemas.schema_employee import EmployeeCreate, EmployeeUpdate,EmployeeResponse,EmployeeWithUserCreate
 
 class EmployeeService: 
     """
@@ -110,3 +110,49 @@ class EmployeeService:
         db.delete(db_employee)
         db.commit()
         return {"message": f"Empleado con ID {employee_id} eliminado exitosamente."}
+
+
+
+    def create_employee_with_user(self, db: Session, employee_data: EmployeeWithUserCreate) -> Employee:
+            """
+            1. Separa los datos (Usuario vs Empleado).
+            2. Guarda el Empleado en la BD local.
+            3. (Opcional) Aquí podrías llamar al User Service para crear el usuario.
+            """
+            # 1. Convertimos a diccionario
+            full_data = employee_data.model_dump()
+            
+            # 2. Extraemos y quitamos los campos que NO son de la tabla Employee
+            username = full_data.pop("username")  
+            password = full_data.pop("password")
+            
+            # full_data ahora solo tiene: nombre, apellido, email, sucursal_id, etc.
+
+            # 3. Creamos la instancia del modelo Employee
+            db_employee = Employee(**full_data)
+
+            try:
+                db.add(db_employee)
+                db.commit()
+                db.refresh(db_employee)
+                
+                # --- IMPORTANTE ---
+                # Aquí ya tienes el empleado creado (db_employee.id).
+                # En un futuro, aquí agregarás la llamada HTTP a tu User Service 
+                # enviando el username, password y el db_employee.id.
+                print(f"DEBUG: Empleado creado ID {db_employee.id}. Usuario '{username}' pendiente de registro en Auth Service.")
+                
+                return db_employee
+
+            except IntegrityError:
+                db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail="El correo electrónico ya está registrado."
+                )
+            except Exception as e:
+                db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                    detail=f"Error al crear empleado con usuario: {str(e)}"
+                )

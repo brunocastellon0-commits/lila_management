@@ -86,3 +86,16 @@ class EmployeeResponse(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+
+
+# --------------------------------------------------------------------
+# 4 EmployeeWithUserCreate 
+# --------------------------------------------------------------------
+class EmployeeWithUserCreate(EmployeeCreate):
+    """
+    Schema compuesto: Recibe los datos del empleado + credenciales de usuario.
+    Esto es lo que el Frontend envía en el formulario de registro.
+    """
+    username: str = Field(..., min_length=3, max_length=50, description="Nombre de usuario para login.")
+    password: str = Field(..., min_length=6, description="Contraseña para el usuario.")

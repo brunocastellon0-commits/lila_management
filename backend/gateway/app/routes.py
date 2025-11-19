@@ -182,6 +182,20 @@ async def read_all_employees_via_gateway(request: Request):
     )
 
 
+@router.post("/employees-with-user", status_code=201)
+async def create_employee_with_user_via_gateway(request: Request):
+    """
+    Endpoint Gateway: /rh/employees-with-user
+    Redirige a: Service /employees/with-user
+    """
+    data = await request.json()
+    return await forward_request(
+        "POST",
+        f"{settings.rh_service_url}/employees/with-user", # Apunta a la nueva ruta del router
+        data=data,
+        headers=dict(request.headers.items()),
+    )
+
 @router.get("/employees/{employee_id}")
 async def read_employee_by_id_via_gateway(employee_id: int, request: Request):
     """Obtiene un empleado específico por ID."""

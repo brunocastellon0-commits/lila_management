@@ -1,5 +1,3 @@
-# rh_service/app/schemas/employee_schedule.py
-
 from pydantic import BaseModel, Field, validator
 from datetime import time
 from typing import List, Optional
@@ -14,18 +12,18 @@ class EmployeeScheduleCreate(BaseModel):
     
     # Claves foráneas obligatorias
     employee_id: int = Field(..., description="ID del empleado al que se asigna el horario.")
-    sucursal_id: int = Field(..., description="ID de la sucursal donde trabaja el empleado.")  # ← NUEVO
+    sucursal_id: int = Field(..., description="ID de la sucursal donde trabaja el empleado.")
     
-    nombre_horario: str = Field(..., max_length=100, description="Nombre del patrón (Ej: Turno Mañana - Lunes a Viernes).")  # ← Longitud aumentada
+    nombre_horario: str = Field(..., max_length=100, description="Nombre del patrón (Ej: Turno Mañana - Lunes a Viernes).")
     
     # CAMBIO: Ahora es una lista de días
-    dias_semana: List[int] = Field(..., description="Lista de días de la semana (1: Lunes, 7: Domingo).")  # ← CAMBIO PRINCIPAL
+    dias_semana: List[int] = Field(..., description="Lista de días de la semana (1: Lunes, 7: Domingo).")
     
     hora_inicio_patron: time = Field(..., description="Hora de inicio del turno.")
     hora_fin_patron: time = Field(..., description="Hora de fin del turno.")
     
     es_actual: bool = Field(default=True, description="Indica si este patrón de horario está activo.")
-    descripcion: Optional[str] = Field(None, description="Descripción adicional del horario.")  # ← NUEVO
+    descripcion: Optional[str] = Field(None, description="Descripción adicional del horario.")
 
     @validator('dias_semana')
     def validate_dias_semana(cls, v):
@@ -56,15 +54,15 @@ class EmployeeScheduleUpdate(BaseModel):
     Schema para actualizar un patrón de horario existente. Todos los campos son opcionales.
     """
     employee_id: Optional[int] = Field(None, description="ID del empleado a reasignar.")
-    sucursal_id: Optional[int] = Field(None, description="ID de la sucursal.")  # ← NUEVO
+    sucursal_id: Optional[int] = Field(None, description="ID de la sucursal.")
     
     nombre_horario: Optional[str] = Field(None, max_length=100)
-    dias_semana: Optional[List[int]] = Field(None, description="Lista de días de la semana")  # ← CAMBIO
+    dias_semana: Optional[List[int]] = Field(None, description="Lista de días de la semana")
     
     hora_inicio_patron: Optional[time] = None
     hora_fin_patron: Optional[time] = None
     es_actual: Optional[bool] = None
-    descripcion: Optional[str] = Field(None, description="Descripción adicional del horario.")  # ← NUEVO
+    descripcion: Optional[str] = Field(None, description="Descripción adicional del horario.")
 
     @validator('dias_semana')
     def validate_dias_semana_update(cls, v):
@@ -91,20 +89,29 @@ class EmployeeScheduleResponse(BaseModel):
     """
     id: int 
     employee_id: int
-    sucursal_id: int  # ← NUEVO
+    sucursal_id: int
     nombre_horario: str
-    dias_semana: List[int]  # ← CAMBIO: Ahora es lista
+    dias_semana: List[int] 
     hora_inicio_patron: time
     hora_fin_patron: time
     es_actual: bool
-    descripcion: Optional[str] = None  # ← NUEVO
+    descripcion: Optional[str] = None
+    @validator('dias_semana', pre=True)
+    def parse_dias_semana_from_string(cls, v):
+        if isinstance(v, str):
+            # Si viene vacio o solo comas, devuelve lista vacia
+            if not v.strip():
+                return []
+            # Convierte '1,2,3' en [1, 2, 3]
+            return [int(day) for day in v.split(',') if day.strip()]
+        return v
     
     class Config:
         from_attributes = True
 
 
 # --------------------------------------------------------------------
-# 4. NUEVO: Schema para Horario Mensual Generado
+# 4. MonthlyScheduleResponse (Schema para Horario Mensual)
 # --------------------------------------------------------------------
 class MonthlyScheduleResponse(BaseModel):
     """
@@ -123,12 +130,11 @@ class MonthlyScheduleResponse(BaseModel):
 
 
 # --------------------------------------------------------------------
-# 5. NUEVO: Schema para Creación Rápida de Horarios
+# 5. BulkScheduleCreate (Schema para Creación Rápida)
 # --------------------------------------------------------------------
 class BulkScheduleCreate(BaseModel):
     """
     Schema para crear múltiples patrones de horario de una vez.
-    Útil para asignar el mismo horario a varios empleados.
     """
     employee_ids: List[int] = Field(..., description="Lista de IDs de empleados")
     sucursal_id: int = Field(..., description="ID de la sucursal")

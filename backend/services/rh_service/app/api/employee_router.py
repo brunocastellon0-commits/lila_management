@@ -9,12 +9,39 @@ from sqlalchemy.orm import Session
 # Importación de dependencias y servicios
 from app.database import get_db
 from app.services.employee_service import EmployeeService
-from app.schemas.schema_employee import EmployeeCreate, EmployeeUpdate, EmployeeResponse
+from app.schemas.schema_employee import EmployeeCreate, EmployeeUpdate, EmployeeResponse,EmployeeWithUserCreate
 
-# ✅ SOLUCIÓN: Deshabilitar trailing slash redirect
+
 router = APIRouter(redirect_slashes=False)
+# --- RUTA NUEVA PARA REGISTRO COMBINADO ---
+@router.post(
+    "/with-user", 
+    response_model=EmployeeResponse, 
+    status_code=status.HTTP_201_CREATED,
+    summary="Crea empleado y usuario simultáneamente"
+)
+def create_employee_with_user_route(
+    payload: EmployeeWithUserCreate, 
+    db: Session = Depends(get_db)
+):
+    """
+    Recibe datos de empleado + username/password.
+    Crea el usuario en Auth Service (lógica en Service) y el empleado en local.
+    """
+    service = EmployeeService()
+    try:
+        # Asumimos que tu servicio tiene este método. 
+        # Si no, te paso el código del servicio en el siguiente mensaje.
+        new_employee = service.create_employee_with_user(db=db, employee_data=payload)
+        return new_employee
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except IntegrityError:
+        raise HTTPException(status_code=409, detail="Datos duplicados (email o usuario).")
+    except Exception as e:
+        print(f"Error en router: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# ✅ CRÍTICO: Rutas SIN barra final
 @router.post(
     "", 
     response_model=EmployeeResponse, 
