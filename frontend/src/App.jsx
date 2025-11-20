@@ -10,22 +10,20 @@ import Login from './pages/login.jsx';
 import Register from './pages/register.jsx';
 import Rh from './pages/rh.jsx';
 import Welcome from './pages/welcome.jsx';
+import DashboardHome from './pages/pagina_principal.jsx';
+import Produccion  from './pages/Produccion.jsx';
 function App() {
   return (
     <Router>
       <Routes>
         {/* Ruta de inicio, lleva a Login */}
         <Route path="/" element={<Login />} /> 
-        
-        {/* Rutas específicas */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        
-        {/* Por lo general, el panel de RH debe estar protegido. 
-            Aquí solo establecemos la ruta. */}
         <Route path="/rh/*" element={<Rh />} />
         <Route path="/welcome" element={<Welcome />} />
-        
+        <Route path="/dashboard" element={<DashboardHome />} />
+        <Route path="/produccion" element={<Produccion />} />
       </Routes>
     </Router>
   );

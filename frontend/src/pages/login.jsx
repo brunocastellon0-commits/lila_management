@@ -41,7 +41,7 @@ const Login = () => {
         localStorage.setItem("email", data.user.email);
         localStorage.setItem("role", data.user.role);
 
-        navigate("/rh");
+        navigate("/dashboard");
       } else {
         alert(data.detail || "Credenciales incorrectas");
       }
