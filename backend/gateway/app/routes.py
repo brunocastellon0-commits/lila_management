@@ -182,19 +182,20 @@ async def read_all_employees_via_gateway(request: Request):
     )
 
 
-@router.post("/employees-with-user", status_code=201)
+@router.post("/employees/with-user", status_code=201)
 async def create_employee_with_user_via_gateway(request: Request):
     """
-    Endpoint Gateway: /rh/employees-with-user
+    Endpoint Gateway: /rh/employees/with-user
     Redirige a: Service /employees/with-user
     """
     data = await request.json()
     return await forward_request(
         "POST",
-        f"{settings.rh_service_url}/employees/with-user", # Apunta a la nueva ruta del router
+        f"{settings.rh_service_url}/employees/with-user",
         data=data,
         headers=dict(request.headers.items()),
     )
+
 
 @router.get("/employees/{employee_id}")
 async def read_employee_by_id_via_gateway(employee_id: int, request: Request):
@@ -397,6 +398,7 @@ async def read_trainings_via_gateway(request: Request):
         headers=dict(request.headers.items()),
     )
 
+
 # ========================================
 # RUTAS DE POSTULANTES (IA)
 # ========================================
@@ -452,6 +454,7 @@ async def create_postulante_via_gateway(request: Request):
         except Exception as e:
              raise HTTPException(status_code=500, detail=f"Error forwarding multipart: {str(e)}")
 
+
 @router.get("/postulantes")
 async def read_postulantes_via_gateway(request: Request):
     """Listar postulantes."""
@@ -462,6 +465,7 @@ async def read_postulantes_via_gateway(request: Request):
         headers=dict(request.headers.items()),
     )
 
+
 @router.get("/postulantes/{postulante_id}")
 async def read_postulante_by_id_via_gateway(postulante_id: int, request: Request):
     """Obtener postulante por ID."""
@@ -471,6 +475,7 @@ async def read_postulante_by_id_via_gateway(postulante_id: int, request: Request
         headers=dict(request.headers.items()),
     )
 
+
 @router.patch("/postulantes/{postulante_id}")
 async def update_postulante_via_gateway(postulante_id: int, request: Request):
     """Actualizar postulante (ej: apto/no apto)."""
@@ -478,17 +483,6 @@ async def update_postulante_via_gateway(postulante_id: int, request: Request):
     return await forward_request(
         "PATCH",
         f"{settings.rh_service_url}/postulantes/{postulante_id}",
-        data=data,
-        headers=dict(request.headers.items()),
-    )
-
-@router.post("/postulantes/chat-rrhh/")
-async def chat_rrhh_via_gateway(request: Request):
-    """Chatbot de RRHH."""
-    data = await request.json()
-    return await forward_request(
-        "POST",
-        f"{settings.rh_service_url}/postulantes/chat-rrhh/",
         data=data,
         headers=dict(request.headers.items()),
     )

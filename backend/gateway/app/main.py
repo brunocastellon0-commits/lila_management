@@ -1,8 +1,8 @@
 # gateway/app/main.py
 
-from fastapi import FastAPI,Request
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from gateway.app.routes import router,forward_request
+from gateway.app.routes import router, forward_request
 from gateway.app.config import settings
 
 app = FastAPI(
@@ -23,7 +23,12 @@ app.add_middleware(
 )
 
 
+# Montamos el router dos veces para soportar ambos prefijos
+# /rh para el área de empleados
+# /api/rh para el área de reclutamiento (legacy)
+app.include_router(router, prefix="/rh")
 app.include_router(router, prefix="/api/rh")
+
 # ✅ RUTAS DE AUTENTICACIÓN DIRECTAS EN EL MAIN
 @app.post("/auth/login")
 async def login_user_via_gateway(request: Request):
