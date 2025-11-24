@@ -1,6 +1,3 @@
-
-
-
 # ==========================================
 # gateway/app/config.py
 # ==========================================
@@ -23,8 +20,8 @@ class Settings(BaseSettings):
     env: str = "development"
     debug: bool = True
     
-    # Timeouts
-    request_timeout: int = 10
+    # Timeouts - Aumentados para operaciones de IA (Ollama)
+    request_timeout: int = 60
     connect_timeout: int = 5
     
     class Config:

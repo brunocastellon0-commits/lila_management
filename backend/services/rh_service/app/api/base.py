@@ -14,6 +14,10 @@ from app.api import training_router
 from app.api import alert_router
 from app.api import role_router
 from app.api import sucursal_router
+
+# IMPORTAMOS EL NUEVO ROUTER DE POSTULANTES
+from app.api import postulante_router
+
 # El router principal
 api_router = APIRouter()
 
@@ -49,17 +53,21 @@ api_router.include_router(shift_router.router, tags=["shift"], prefix="/shift")
 api_router.include_router(training_router.router, tags=["training"], prefix="/training")
 
 # 10. RUTAS CONSOLIDADAS: HR Gateway (Estadísticas y Alertas)
-
 api_router.include_router(
     alert_router.router,
     prefix="/alert", 
     tags=["Alertas"]
 )
 
-#11 Ruta para roles
-
+# 11. Ruta para roles
 api_router.include_router(role_router.router, tags=["Roles"], prefix="/roles")
 
-#11 Ruta para roles
-
+# 12. Ruta para sucursales
 api_router.include_router(sucursal_router.router, tags=["Sucursales"], prefix="/sucursales")
+
+# 13. RUTA DE POSTULANTES (IA + CVs)
+api_router.include_router(
+    postulante_router.router, 
+    tags=["Postulantes IA"], 
+    prefix="/postulantes"
+)

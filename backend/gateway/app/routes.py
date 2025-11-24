@@ -49,7 +49,7 @@ async def forward_request(
                 content = None
             elif not response.content or len(response.content) == 0:
                 # Para endpoints de listas, devolver array vacío
-                if any(x in url for x in ['/sucursales', '/employees', '/schedules', '/roles']):
+                if any(x in url for x in ['/sucursales', '/employees', '/schedules', '/roles', '/postulantes']):
                     content = []
                 else:
                     content = None
@@ -58,7 +58,7 @@ async def forward_request(
                     content = response.json()
                     # ✅ Si el JSON es null, convertir a array vacío para endpoints de lista
                     if content is None:
-                        if any(x in url for x in ['/sucursales', '/employees', '/schedules', '/roles']):
+                        if any(x in url for x in ['/sucursales', '/employees', '/schedules', '/roles', '/postulantes']):
                             content = []
                 except json.JSONDecodeError:
                     content = {"detail": response.text if response.text else "Invalid JSON response"}
@@ -394,5 +394,101 @@ async def read_trainings_via_gateway(request: Request):
         "GET",
         f"{settings.rh_service_url}/training",
         params=dict(request.query_params),
+        headers=dict(request.headers.items()),
+    )
+
+# ========================================
+# RUTAS DE POSTULANTES (IA)
+# ========================================
+
+@router.post("/postulantes", status_code=201)
+async def create_postulante_via_gateway(request: Request):
+    """
+    Crea un postulante con archivo PDF (Multipart).
+    Reenvía la solicitud multipart al microservicio.
+    """
+    # Leemos el form data (incluye archivos)
+    form = await request.form()
+    
+    # Preparamos los datos para httpx
+    files_to_send = {}
+    data_to_send = {}
+    
+    for key, value in form.items():
+        if isinstance(value, str):
+            data_to_send[key] = value
+        else:
+            # Es un UploadFile
+            content = await value.read()
+            files_to_send[key] = (value.filename, content, value.content_type)
+            
+    # Headers: Copiamos auth, pero NO content-type (httpx lo pone con boundary)
+    headers = {}
+    if "authorization" in request.headers:
+        headers["authorization"] = request.headers["authorization"]
+
+    async with httpx.AsyncClient(timeout=settings.request_timeout) as client:
+        try:
+            response = await client.post(
+                f"{settings.rh_service_url}/postulantes/",
+                files=files_to_send,
+                data=data_to_send,
+                headers=headers
+            )
+            
+            # CORS headers
+            cors_headers = {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization",
+                "Access-Control-Allow-Credentials": "true"
+            }
+            
+            return JSONResponse(
+                content=response.json(), 
+                status_code=response.status_code,
+                headers=cors_headers
+            )
+        except Exception as e:
+             raise HTTPException(status_code=500, detail=f"Error forwarding multipart: {str(e)}")
+
+@router.get("/postulantes")
+async def read_postulantes_via_gateway(request: Request):
+    """Listar postulantes."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/postulantes/",
+        params=dict(request.query_params),
+        headers=dict(request.headers.items()),
+    )
+
+@router.get("/postulantes/{postulante_id}")
+async def read_postulante_by_id_via_gateway(postulante_id: int, request: Request):
+    """Obtener postulante por ID."""
+    return await forward_request(
+        "GET",
+        f"{settings.rh_service_url}/postulantes/{postulante_id}",
+        headers=dict(request.headers.items()),
+    )
+
+@router.patch("/postulantes/{postulante_id}")
+async def update_postulante_via_gateway(postulante_id: int, request: Request):
+    """Actualizar postulante (ej: apto/no apto)."""
+    data = await request.json()
+    return await forward_request(
+        "PATCH",
+        f"{settings.rh_service_url}/postulantes/{postulante_id}",
+        data=data,
+        headers=dict(request.headers.items()),
+    )
+
+@router.post("/postulantes/chat-rrhh/")
+async def chat_rrhh_via_gateway(request: Request):
+    """Chatbot de RRHH."""
+    data = await request.json()
+    return await forward_request(
+        "POST",
+        f"{settings.rh_service_url}/postulantes/chat-rrhh/",
+        data=data,
         headers=dict(request.headers.items()),
     )

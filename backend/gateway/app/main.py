@@ -23,7 +23,7 @@ app.add_middleware(
 )
 
 
-app.include_router(router, prefix="/rh")
+app.include_router(router, prefix="/api/rh")
 # ✅ RUTAS DE AUTENTICACIÓN DIRECTAS EN EL MAIN
 @app.post("/auth/login")
 async def login_user_via_gateway(request: Request):

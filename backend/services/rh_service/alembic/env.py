@@ -31,6 +31,7 @@ from app.models import shift
 from app.models import training
 from app.models import sucursal
 from app.models import role
+from app.models import postulante
 # NOTA: Ajusta estas líneas si tus modelos están en otro lugar.
 # --------------------------------------------------------------------------
 
