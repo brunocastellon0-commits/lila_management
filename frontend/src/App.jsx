@@ -17,7 +17,7 @@ function App() {
     <Router>
       <Routes>
         {/* Ruta de inicio, lleva a Login */}
-        <Route path="/" element={<Login />} /> 
+        <Route path="/" element={<Welcome />} /> 
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/rh/*" element={<Rh />} />
