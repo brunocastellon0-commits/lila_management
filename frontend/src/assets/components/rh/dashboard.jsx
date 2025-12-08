@@ -8,6 +8,8 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  Loader2,
+  AlertTriangle
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card.jsx";
 import { Badge } from "../ui/badge.jsx";
@@ -130,9 +132,9 @@ export function DashboardMain({ onModuleSelect }) {
         const newModuleCards = [
           {
             moduleId: "gestionAdministrativa",
-            cardTitle: "Gestión Administrativa y Nómina",
+            cardTitle: "Gestión Administrativa",
             cardDescription:
-              "Control de personal, horarios, nóminas y reportes",
+              "Control de personal, horarios y nóminas",
             cardIcon: Users,
             moduleStats: {
               primaryStat: data.total_employees.toString(),
@@ -143,9 +145,9 @@ export function DashboardMain({ onModuleSelect }) {
           },
           {
             moduleId: "reclutamiento",
-            cardTitle: "Reclutamiento y Selección",
+            cardTitle: "Reclutamiento",
             cardDescription:
-              "Gestión de vacantes, candidatos y procesos de selección",
+              "Gestión de vacantes y candidatos",
             cardIcon: UserPlus,
             moduleStats: {
               primaryStat: "8",
@@ -156,9 +158,9 @@ export function DashboardMain({ onModuleSelect }) {
           },
           {
             moduleId: "capacitacion",
-            cardTitle: "Capacitación y Desarrollo",
+            cardTitle: "Capacitación",
             cardDescription:
-              "Programas de formación, certificaciones y desarrollo",
+              "Programas de formación y desarrollo",
             cardIcon: GraduationCap,
             moduleStats: {
               primaryStat: data.active_trainings.toString(),
@@ -169,9 +171,9 @@ export function DashboardMain({ onModuleSelect }) {
           },
           {
             moduleId: "climaLaboral",
-            cardTitle: "Clima Laboral y Motivación",
+            cardTitle: "Clima Laboral",
             cardDescription:
-              "Encuestas, feedback y bienestar del personal",
+              "Encuestas y bienestar del personal",
             cardIcon: Heart,
             moduleStats: {
               primaryStat: "4.2",
@@ -182,9 +184,9 @@ export function DashboardMain({ onModuleSelect }) {
           },
           {
             moduleId: "cumplimiento",
-            cardTitle: "Cumplimiento Legal y Seguridad",
+            cardTitle: "Cumplimiento Legal",
             cardDescription:
-              "Normativas, certificados, seguridad e higiene",
+              "Normativas, seguridad e higiene",
             cardIcon: Shield,
             moduleStats: {
               primaryStat: `${data.compliance_rate}%`,
@@ -213,43 +215,49 @@ export function DashboardMain({ onModuleSelect }) {
     fetchDashboardData();
   }, []);
 
+  // Iconos adaptados a colores neon
   const getTrendIcon = (trendDirection) => {
     switch (trendDirection) {
       case "up":
-        return <TrendingUp className="h-3 w-3 text-green-600" />;
+        return <TrendingUp className="h-3 w-3 text-emerald-400" />;
       case "down":
-        return <TrendingDown className="h-3 w-3 text-red-600" />;
+        return <TrendingDown className="h-3 w-3 text-red-400" />;
       default:
-        return <Minus className="h-3 w-3 text-gray-400" />;
+        return <Minus className="h-3 w-3 text-gray-500" />;
     }
   };
 
+  // Badges oscuros
   const getStatusBadge = (statusType) => {
     switch (statusType) {
       case "good":
-        return "bg-green-100 text-green-800";
+        return "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
       case "warning":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-amber-500/10 text-amber-400 border border-amber-500/20";
       case "critical":
-        return "bg-red-100 text-red-800";
+        return "bg-red-500/10 text-red-400 border border-red-500/20";
       default:
-        return "bg-gray-100 text-gray-600";
+        return "bg-gray-800 text-gray-400 border border-gray-700";
     }
   };
 
   if (isLoading) {
     return (
-      <div className="p-8 text-center text-gray-500">
-        Cargando estadísticas del dashboard...
+      <div className="flex flex-col items-center justify-center p-12 text-gray-500">
+        <Loader2 className="w-8 h-8 animate-spin text-[#2A9D8F] mb-3" />
+        <p className="text-sm font-medium">Cargando estadísticas...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      
+      {/* Mensaje de Error */}
       {error && (
-        <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-          ⚠ Error de Conexión: {error}. Se muestran datos de prueba.
+        <div className="p-4 bg-red-900/10 border border-red-500/30 text-red-400 rounded-xl flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 shrink-0" />
+          <span>Error de Conexión: {error}. Se muestran datos de prueba.</span>
         </div>
       )}
 
@@ -258,41 +266,46 @@ export function DashboardMain({ onModuleSelect }) {
         {quickStats.map((stat, index) => (
           <Card
             key={index}
-            className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200"
+            className="bg-[#13161C] border border-white/10 shadow-lg shadow-black/20 hover:border-white/20 transition-all duration-300"
           >
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-gray-500 mb-1">{stat.statLabel}</p>
-                  <p className="text-2xl font-semibold text-gray-900">
+                  <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-2">
+                    {stat.statLabel}
+                  </p>
+                  <p className="text-3xl font-bold text-white font-['Outfit']">
                     {stat.statValue}
                   </p>
+                  
                   {stat.changeData && (
-                    <div className="flex items-center gap-1 mt-1 text-xs">
+                    <div className="flex items-center gap-2 mt-2 text-xs">
                       {getTrendIcon(stat.changeData.trendDirection)}
                       <span
-                        className={
+                        className={`font-medium ${
                           stat.changeData.trendDirection === "up"
-                            ? "text-green-600"
+                            ? "text-emerald-400"
                             : stat.changeData.trendDirection === "down"
-                            ? "text-red-600"
+                            ? "text-red-400"
                             : "text-gray-500"
-                        }
+                        }`}
                       >
                         {stat.changeData.changeValue}
                       </span>
                     </div>
                   )}
                 </div>
+                
                 {stat.statusType && (
                   <Badge
-                    className={`px-2 py-1 rounded ${getStatusBadge(
+                    variant="outline"
+                    className={`px-2 py-1 rounded-md text-[10px] font-bold ${getStatusBadge(
                       stat.statusType
-                    )} text-xs`}
+                    )}`}
                   >
-                    {stat.statusType === "good" && "✓"}
-                    {stat.statusType === "warning" && "!"}
-                    {stat.statusType === "critical" && "×"}
+                    {stat.statusType === "good" && "OK"}
+                    {stat.statusType === "warning" && "ATENCIÓN"}
+                    {stat.statusType === "critical" && "CRÍTICO"}
                   </Badge>
                 )}
               </div>
@@ -302,12 +315,12 @@ export function DashboardMain({ onModuleSelect }) {
       </div>
 
       {/* Módulos del sistema */}
-      <div className="space-y-4">
+      <div className="space-y-5">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">
+          <h2 className="text-xl font-bold text-white mb-1 font-['Outfit']">
             Módulos del Sistema
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-400 font-light">
             Accede a las diferentes secciones de gestión de RRHH
           </p>
         </div>
@@ -318,53 +331,59 @@ export function DashboardMain({ onModuleSelect }) {
             return (
               <Card
                 key={moduleCard.moduleId}
-                className="group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border border-gray-200 bg-white"
+                className="group cursor-pointer transition-all duration-300 hover:-translate-y-1 bg-[#13161C] border border-white/10 hover:border-[#2A9D8F]/50 hover:shadow-[0_0_20px_rgba(42,157,143,0.15)] relative overflow-hidden"
                 onClick={() =>
                   onModuleSelect && onModuleSelect(moduleCard.moduleId)
                 }
               >
-                <CardHeader className="pb-4">
+                {/* Fondo decorativo hover */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#2A9D8F]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+                <CardHeader className="pb-4 relative z-10">
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4">
-                      <div className="p-3 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 text-white group-hover:shadow-lg transition-shadow duration-300">
+                      {/* Icono con gradiente de marca */}
+                      <div className="p-3 rounded-xl bg-gradient-to-br from-[#1B4F55] to-[#2A9D8F] text-white shadow-lg shadow-black/40 group-hover:scale-110 transition-transform duration-300">
                         <IconComponent className="h-6 w-6" />
                       </div>
                       <div className="flex-1">
-                        <CardTitle className="text-lg font-semibold mb-2 group-hover:text-teal-700 transition-colors">
+                        <CardTitle className="text-lg font-bold text-gray-200 mb-1 group-hover:text-white transition-colors">
                           {moduleCard.cardTitle}
                         </CardTitle>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-xs text-gray-500 group-hover:text-gray-400 transition-colors line-clamp-2">
                           {moduleCard.cardDescription}
                         </p>
                       </div>
                     </div>
                     {moduleCard.alertCount > 0 && (
-                      <Badge className="text-xs animate-pulse">
+                      <Badge className="bg-red-500/20 text-red-400 border border-red-500/30 text-[10px] animate-pulse">
                         {moduleCard.alertCount}
                       </Badge>
                     )}
                   </div>
                 </CardHeader>
 
-                <CardContent className="pt-0">
-                  <div className="p-4 rounded-lg bg-gray-100 border border-gray-200">
+                <CardContent className="pt-0 relative z-10">
+                  <div className="p-4 rounded-xl bg-black/20 border border-white/5 group-hover:border-white/10 transition-colors">
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="flex items-baseline gap-2 mb-1">
-                          <span className="text-xl font-semibold text-gray-900">
+                          <span className="text-2xl font-bold text-white font-['Outfit']">
                             {moduleCard.moduleStats.primaryStat}
                           </span>
                           {moduleCard.moduleStats.secondaryStat && (
-                            <span className="text-sm text-gray-500">
+                            <span className="text-xs text-[#2A9D8F] font-bold uppercase tracking-wider">
                               {moduleCard.moduleStats.secondaryStat}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-[10px] text-gray-500 font-mono">
                           {moduleCard.moduleStats.statDescription}
                         </p>
                       </div>
-                      <div className="w-2 h-2 rounded-full bg-teal-500 group-hover:bg-teal-600 transition-colors"></div>
+                      
+                      {/* Indicador de estado visual */}
+                      <div className="w-2 h-2 rounded-full bg-[#2A9D8F] shadow-[0_0_8px_#2A9D8F] group-hover:bg-[#4FD1C5] transition-colors"></div>
                     </div>
                   </div>
                 </CardContent>

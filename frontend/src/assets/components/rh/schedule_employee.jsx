@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { 
   Clock, Users, Building2, Plus, ChevronLeft, ChevronRight,
   Calendar as CalendarIcon, Trash2, CalendarDays, X, Check, AlertCircle,
-  User, Briefcase
+  User, Briefcase, Loader2
 } from "lucide-react";
 
 // ============================================
@@ -11,9 +11,6 @@ import {
 
 const API_BASE_URL = 'http://127.0.0.1:7000';
 
-/**
- * Maneja respuestas de error del servidor
- */
 async function handleErrorResponse(response) {
   console.error(`❌ Error HTTP ${response.status}: ${response.statusText}`);
   
@@ -51,9 +48,6 @@ async function handleErrorResponse(response) {
   throw error;
 }
 
-/**
- * Función fetchAPI robusta
- */
 const fetchAPI = async (endpoint, options = {}) => {
   try {
     const cleanBase = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
@@ -100,7 +94,6 @@ const fetchAPI = async (endpoint, options = {}) => {
       }
       return parsedData;
     } catch { 
-      // CORREGIDO: Eliminamos 'parseError' del catch para evitar warnings de unused-vars
       throw new Error(`Respuesta inválida del servidor: ${responseText.substring(0, 50)}...`);
     }
   } catch (error) {
@@ -173,22 +166,25 @@ const employeeScheduleService = {
 };
 
 // ============================================
-// 2. COMPONENTES UI
+// 2. COMPONENTES UI (DARK MODE)
 // ============================================
 
 const Button = ({ children, variant = "primary", size = "default", className = "", ...props }) => {
-  const baseStyles = "inline-flex items-center justify-center rounded-xl font-medium transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100";
+  const baseStyles = "inline-flex items-center justify-center rounded-xl font-bold transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#2A9D8F] focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100 font-['Outfit']";
+  
   const variants = {
-    primary: "bg-teal-600 text-white hover:bg-teal-700 shadow-sm hover:shadow-teal-500/30",
-    outline: "border border-slate-200 bg-transparent hover:bg-slate-50 text-slate-900",
-    ghost: "hover:bg-slate-100 text-slate-700",
-    destructive: "bg-red-50 text-red-600 hover:bg-red-100 border border-red-200",
+    primary: "bg-gradient-to-r from-[#1B4F55] to-[#2A9D8F] text-white hover:from-[#2A9D8F] hover:to-[#1B4F55] shadow-lg shadow-[#2A9D8F]/20 border border-white/10",
+    outline: "border border-white/10 bg-transparent hover:bg-white/5 text-white hover:text-[#2A9D8F]",
+    ghost: "hover:bg-white/5 text-gray-400 hover:text-white",
+    destructive: "bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20",
   };
+  
   const sizes = {
     default: "h-10 py-2 px-4",
     sm: "h-9 px-3 rounded-lg text-xs",
     icon: "h-10 w-10",
   };
+  
   return (
     <button className={`${baseStyles} ${variants[variant] || variants.primary} ${sizes[size] || sizes.default} ${className}`} {...props}>
       {children}
@@ -197,20 +193,20 @@ const Button = ({ children, variant = "primary", size = "default", className = "
 };
 
 const Card = ({ children, className = "" }) => (
-  <div className={`bg-white rounded-2xl border border-slate-200 shadow-sm ${className}`}>
+  <div className={`bg-[#13161C] rounded-[2rem] border border-white/10 shadow-lg shadow-black/20 ${className}`}>
     {children}
   </div>
 );
 
 const Badge = ({ children, className = "" }) => (
-  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${className}`}>
+  <span className={`inline-flex items-center rounded-lg px-2.5 py-0.5 text-xs font-bold transition-colors ${className}`}>
     {children}
   </span>
 );
 
 const Input = ({ className = "", ...props }) => (
   <input 
-    className={`flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-shadow ${className}`}
+    className={`flex h-10 w-full rounded-xl border border-white/10 bg-[#0c0e12] px-3 py-2 text-sm text-white placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#2A9D8F] focus-visible:border-[#2A9D8F] disabled:cursor-not-allowed disabled:opacity-50 transition-all ${className}`}
     {...props}
   />
 );
@@ -220,14 +216,14 @@ const SelectNative = ({ options, value, onChange, placeholder, className = "" })
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className={`flex h-10 w-full appearance-none items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-50 transition-shadow ${className}`}
+      className={`flex h-10 w-full appearance-none items-center justify-between rounded-xl border border-white/10 bg-[#0c0e12] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#2A9D8F] disabled:cursor-not-allowed disabled:opacity-50 transition-all ${className}`}
     >
-      <option value="" disabled>{placeholder}</option>
+      <option value="" disabled className="bg-[#13161C] text-gray-500">{placeholder}</option>
       {options.map((opt) => (
-        <option key={opt.value} value={opt.value}>{opt.label}</option>
+        <option key={opt.value} value={opt.value} className="bg-[#13161C] text-white">{opt.label}</option>
       ))}
     </select>
-    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
       <ChevronLeft className="h-4 w-4 rotate-[-90deg]" />
     </div>
   </div>
@@ -236,11 +232,11 @@ const SelectNative = ({ options, value, onChange, placeholder, className = "" })
 const Dialog = ({ open, onClose, title, children, maxWidth = "max-w-lg" }) => {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className={`bg-white rounded-2xl shadow-xl w-full ${maxWidth} max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 border border-slate-100`}>
-        <div className="flex items-center justify-between p-6 border-b border-slate-100">
-          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-full hover:bg-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className={`bg-[#13161C] rounded-[2rem] shadow-2xl w-full ${maxWidth} max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 border border-white/10`}>
+        <div className="flex items-center justify-between p-6 border-b border-white/10 bg-[#13161C] sticky top-0 z-10">
+          <h2 className="text-lg font-bold text-white font-['Outfit']">{title}</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -267,20 +263,20 @@ const ToastContainer = ({ toast }) => {
   if (!toast) return null;
   return (
     <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
-      <div className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg shadow-slate-200 border ${
+      <div className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border ${
         toast.type === 'error' 
-          ? 'bg-white border-red-100 text-red-600' 
-          : 'bg-slate-900 border-slate-800 text-white'
+          ? 'bg-[#13161C] border-red-500/30 text-red-400' 
+          : 'bg-[#13161C] border-[#2A9D8F]/30 text-[#2A9D8F]'
       }`}>
-        {toast.type === 'error' ? <AlertCircle className="w-5 h-5" /> : <Check className="w-5 h-5 text-teal-400" />}
-        <span className="text-sm font-medium">{toast.message}</span>
+        {toast.type === 'error' ? <AlertCircle className="w-5 h-5" /> : <Check className="w-5 h-5" />}
+        <span className="text-sm font-medium text-white">{toast.message}</span>
       </div>
     </div>
   );
 };
 
 // ============================================
-// 3. LÓGICA DE NEGOCIO Y COMPONENTES
+// 3. LÓGICA DE NEGOCIO Y COMPONENTES (DARK)
 // ============================================
 
 const daysOfWeek = [
@@ -314,13 +310,13 @@ function DayDetailModal({ isOpen, onClose, date, events }) {
   return (
     <Dialog open={isOpen} onClose={onClose} title="Detalle de Personal" maxWidth="max-w-2xl">
       <div className="space-y-4">
-        <div className="flex items-center gap-3 bg-teal-50 p-4 rounded-xl border border-teal-100 mb-6">
-          <div className="p-2 bg-white rounded-lg shadow-sm">
-            <CalendarDays className="w-6 h-6 text-teal-600" />
+        <div className="flex items-center gap-3 bg-[#2A9D8F]/10 p-4 rounded-xl border border-[#2A9D8F]/20 mb-6">
+          <div className="p-2 bg-[#13161C] rounded-lg shadow-sm border border-white/10">
+            <CalendarDays className="w-6 h-6 text-[#2A9D8F]" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-teal-900 capitalize">{formatDate(date)}</h3>
-            <p className="text-sm text-teal-600/80 font-medium">
+            <h3 className="text-lg font-bold text-white capitalize font-['Outfit']">{formatDate(date)}</h3>
+            <p className="text-sm text-[#2A9D8F] font-medium">
               {events.length} {events.length === 1 ? 'empleado asignado' : 'empleados asignados'}
             </p>
           </div>
@@ -329,30 +325,30 @@ function DayDetailModal({ isOpen, onClose, date, events }) {
         {events.length > 0 ? (
           <div className="grid gap-3">
             {events.map((event, idx) => (
-              <div key={`${event.id}-${idx}`} className="flex items-start gap-4 p-4 rounded-xl border border-slate-100 bg-white shadow-sm hover:shadow-md hover:border-teal-200 transition-all">
-                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center border border-slate-200 shrink-0">
-                    <User className="w-5 h-5 text-slate-500" />
+              <div key={`${event.id}-${idx}`} className="flex items-start gap-4 p-4 rounded-xl border border-white/5 bg-[#0c0e12] shadow-lg hover:border-[#2A9D8F]/30 transition-all group">
+                 <div className="w-10 h-10 rounded-full bg-[#13161C] flex items-center justify-center border border-white/10 shrink-0 group-hover:border-[#2A9D8F]/50">
+                    <User className="w-5 h-5 text-gray-400 group-hover:text-white" />
                  </div>
                  <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">
                        <div>
-                          <h4 className="font-bold text-slate-900 text-sm">
+                          <h4 className="font-bold text-white text-sm">
                              {event.employee?.nombre} {event.employee?.apellido}
                           </h4>
                           <div className="flex items-center gap-1.5 mt-1">
-                             <Briefcase className="w-3 h-3 text-slate-400" />
-                             <p className="text-xs text-slate-500 font-medium">
+                             <Briefcase className="w-3 h-3 text-gray-500" />
+                             <p className="text-xs text-gray-400 font-medium">
                                 {event.employee?.puesto || "Sin puesto definido"}
                              </p>
                           </div>
                        </div>
-                       <Badge className="bg-teal-50 text-teal-700 border border-teal-100">
+                       <Badge className="bg-[#2A9D8F]/20 text-[#2A9D8F] border border-[#2A9D8F]/30">
                           {event.nombre_horario}
                        </Badge>
                     </div>
                     
-                    <div className="flex items-center gap-2 mt-3 text-xs text-slate-600 bg-slate-50 p-2 rounded-lg w-fit">
-                      <Clock className="w-3.5 h-3.5 text-teal-500" />
+                    <div className="flex items-center gap-2 mt-3 text-xs text-gray-300 bg-[#13161C] p-2 rounded-lg w-fit border border-white/5">
+                      <Clock className="w-3.5 h-3.5 text-[#2A9D8F]" />
                       <span className="font-mono font-semibold">
                         {event.hora_inicio_patron?.toString().slice(0,5)} - {event.hora_fin_patron?.toString().slice(0,5)}
                       </span>
@@ -362,21 +358,21 @@ function DayDetailModal({ isOpen, onClose, date, events }) {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-12 text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+          <div className="flex flex-col items-center justify-center py-12 text-gray-500 bg-[#0c0e12] rounded-xl border border-dashed border-white/10">
              <Users className="w-10 h-10 mb-2 opacity-20" />
              <p className="text-sm font-medium">No hay personal programado para este día.</p>
           </div>
         )}
         
-        <div className="flex justify-end pt-4">
-           <Button onClick={onClose}>Cerrar</Button>
+        <div className="flex justify-end pt-4 border-t border-white/10 mt-4">
+           <Button onClick={onClose} variant="outline">Cerrar</Button>
         </div>
       </div>
     </Dialog>
   );
 }
 
-// --- Componente: Calendario de Sucursal ---
+// --- Componente: Calendario de Sucursal (Dark Mode) ---
 function BranchCalendar({ schedules, currentYear, currentMonth, onPrevMonth, onNextMonth, onDayClick }) {
   const calendarDays = useMemo(() => {
     const days = [];
@@ -415,58 +411,57 @@ function BranchCalendar({ schedules, currentYear, currentMonth, onPrevMonth, onN
   }, [currentYear, currentMonth, schedules]);
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden ring-1 ring-slate-900/5 shadow-lg shadow-slate-200/50">
-      <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-white">
+    <Card className="flex flex-col h-full overflow-hidden">
+      <div className="p-5 border-b border-white/10 flex items-center justify-between bg-[#13161C]">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-teal-50 rounded-lg border border-teal-100">
-            <CalendarIcon className="w-5 h-5 text-teal-600" />
+          <div className="p-2 bg-[#2A9D8F]/10 rounded-lg border border-[#2A9D8F]/20">
+            <CalendarIcon className="w-5 h-5 text-[#2A9D8F]" />
           </div>
-          <h2 className="text-lg font-bold text-slate-800 capitalize">
-            {monthNames[currentMonth]} <span className="text-slate-400 font-medium">{currentYear}</span>
+          <h2 className="text-lg font-bold text-white capitalize font-['Outfit']">
+            {monthNames[currentMonth]} <span className="text-gray-500 font-medium">{currentYear}</span>
           </h2>
         </div>
         <div className="flex gap-1">
-          <Button variant="outline" size="icon" onClick={onPrevMonth} className="h-8 w-8 rounded-lg">
+          <Button variant="ghost" size="icon" onClick={onPrevMonth} className="h-8 w-8 rounded-lg border border-white/10">
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <Button variant="outline" size="icon" onClick={onNextMonth} className="h-8 w-8 rounded-lg">
+          <Button variant="ghost" size="icon" onClick={onNextMonth} className="h-8 w-8 rounded-lg border border-white/10">
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-100">
+      <div className="grid grid-cols-7 bg-[#0c0e12] border-b border-white/10">
         {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((day) => (
-          <div key={day} className="py-2.5 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+          <div key={day} className="py-2.5 text-center text-[11px] font-bold text-gray-500 uppercase tracking-wider">
             {day}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 auto-rows-fr flex-1 bg-slate-50">
+      <div className="grid grid-cols-7 auto-rows-fr flex-1 bg-[#0c0e12]">
         {calendarDays.map((dateObj, index) => (
           <div 
             key={index} 
             onClick={() => dateObj.type === 'current' && onDayClick(dateObj)}
             className={`
-              min-h-[100px] border-b border-r border-slate-100 p-1.5 transition-all flex flex-col gap-1 relative group
+              min-h-[100px] border-b border-r border-white/5 p-1.5 transition-all flex flex-col gap-1 relative group
               ${dateObj.type === 'padding' 
-                ? 'bg-slate-50/80 text-slate-300 cursor-default' 
-                : 'bg-white hover:bg-teal-50/30 cursor-pointer hover:shadow-inner'}
+                ? 'bg-[#0c0e12] text-gray-700 cursor-default' 
+                : 'bg-[#13161C] hover:bg-[#2A9D8F]/10 cursor-pointer'}
             `}
           >
             <div className="flex justify-between items-start px-1">
                 <span className={`text-xs font-medium rounded-full w-6 h-6 flex items-center justify-center ${
-                    dateObj.type === 'current' 
-                    ? 'text-slate-700 group-hover:bg-teal-100 group-hover:text-teal-700 transition-colors' 
-                    : 'text-slate-300'
+                  dateObj.type === 'current' 
+                    ? 'text-gray-300 group-hover:bg-[#2A9D8F] group-hover:text-white transition-colors' 
+                    : 'text-gray-700'
                 }`}>
                 {dateObj.day}
                 </span>
                 
-                {/* Indicador sutil si hay eventos */}
                 {dateObj.events?.length > 0 && (
-                    <span className="flex h-2 w-2 rounded-full bg-teal-500 sm:hidden"></span>
+                    <span className="flex h-1.5 w-1.5 rounded-full bg-[#2A9D8F] sm:hidden shadow-[0_0_5px_#2A9D8F]"></span>
                 )}
             </div>
             
@@ -474,19 +469,19 @@ function BranchCalendar({ schedules, currentYear, currentMonth, onPrevMonth, onN
               {dateObj.events?.slice(0, 3).map((event, idx) => (
                 <div 
                   key={`${event.id}-${idx}`}
-                  className="text-[10px] bg-teal-50 border border-teal-100 text-teal-800 px-1.5 py-1 rounded-md flex items-center gap-1.5 shadow-sm"
+                  className="text-[10px] bg-[#2A9D8F]/10 border border-[#2A9D8F]/20 text-[#2A9D8F] px-1.5 py-1 rounded-md flex items-center gap-1.5"
                   title={`${event.employee?.nombre} ${event.employee?.apellido} - ${event.nombre_horario}`}
                 >
-                  <div className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0" />
-                  <span className="truncate font-semibold leading-tight">
+                  <div className="w-1 h-1 rounded-full bg-[#2A9D8F] shrink-0" />
+                  <span className="truncate font-semibold leading-tight text-white/90">
                     {event.employee?.nombre || "Empleado"}
                   </span>
                 </div>
               ))}
               
               {dateObj.events?.length > 3 && (
-                <div className="text-[10px] font-medium text-slate-400 pl-1.5 pt-0.5 flex items-center gap-1">
-                    <div className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center text-[9px]">
+                <div className="text-[10px] font-medium text-gray-500 pl-1.5 pt-0.5 flex items-center gap-1">
+                    <div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-[9px]">
                         +{dateObj.events.length - 3}
                     </div>
                     <span>más...</span>
@@ -496,8 +491,8 @@ function BranchCalendar({ schedules, currentYear, currentMonth, onPrevMonth, onN
 
             {/* Hint hover */}
             {dateObj.type === 'current' && (
-                <div className="absolute inset-0 bg-teal-900/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex items-center justify-center">
-                    <span className="text-[10px] font-bold text-teal-800 bg-white/90 px-2 py-1 rounded shadow-sm transform scale-95 group-hover:scale-100 transition-transform">
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex items-center justify-center backdrop-blur-[1px]">
+                    <span className="text-[10px] font-bold text-white bg-[#2A9D8F] px-2 py-1 rounded shadow-lg transform scale-95 group-hover:scale-100 transition-transform">
                         Ver detalle
                     </span>
                 </div>
@@ -511,26 +506,26 @@ function BranchCalendar({ schedules, currentYear, currentMonth, onPrevMonth, onN
 
 function BranchSelector({ selectedBranch, onBranchChange, branches }) {
   return (
-    <div className="flex items-center gap-4 mb-6 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm w-full max-w-full overflow-hidden ring-1 ring-slate-900/5">
-      <div className="flex items-center gap-2 text-slate-600 pl-3 shrink-0 border-r border-slate-100 pr-3 py-1">
-        <Building2 className="w-5 h-5 text-slate-400" />
-        <span className="text-sm font-semibold hidden sm:inline text-slate-700">Sucursal</span>
+    <div className="flex items-center gap-4 mb-6 bg-[#13161C] p-2 rounded-2xl border border-white/10 shadow-lg w-full max-w-full overflow-hidden">
+      <div className="flex items-center gap-2 text-gray-400 pl-3 shrink-0 border-r border-white/10 pr-3 py-1">
+        <Building2 className="w-5 h-5 text-[#2A9D8F]" />
+        <span className="text-sm font-semibold hidden sm:inline text-gray-300">Sucursal</span>
       </div>
-      <div className="flex gap-1 overflow-x-auto p-1 no-scrollbar">
+      <div className="flex gap-2 overflow-x-auto p-1 no-scrollbar">
         {branches.map((branch) => (
           <button
             key={branch.id}
             onClick={() => onBranchChange(branch.id)}
             className={`
-              whitespace-nowrap px-3 py-1.5 rounded-lg text-sm font-medium transition-all
+              whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold transition-all border
               ${selectedBranch?.id === branch.id 
-                ? "bg-slate-900 text-white shadow-md" 
-                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"}
+                ? "bg-[#2A9D8F]/10 border-[#2A9D8F] text-[#2A9D8F] shadow-[0_0_10px_rgba(42,157,143,0.2)]" 
+                : "bg-transparent border-transparent text-gray-500 hover:bg-white/5 hover:text-white"}
             `}
           >
             {branch.nombre_sucursal}
             {branch.employees_count !== undefined && (
-               <span className={`ml-2 text-xs opacity-60`}>
+               <span className="ml-2 text-xs opacity-60 bg-white/10 px-1.5 rounded-md">
                  {branch.employees_count}
                </span>
             )}
@@ -561,65 +556,65 @@ function AssignedSchedulesPanel({ schedules, onDelete, isLoading }) {
   };
 
   return (
-    <Card className="flex flex-col h-full ring-1 ring-slate-900/5">
-      <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-white rounded-t-2xl">
+    <Card className="flex flex-col h-full">
+      <div className="p-5 border-b border-white/10 flex items-center justify-between bg-[#13161C] rounded-t-[2rem]">
         <div className="flex items-center gap-2.5">
-          <div className="bg-teal-50 p-1.5 rounded-md">
-            <CalendarDays className="w-4 h-4 text-teal-600" />
+          <div className="bg-[#2A9D8F]/10 p-1.5 rounded-md border border-[#2A9D8F]/20">
+            <CalendarDays className="w-4 h-4 text-[#2A9D8F]" />
           </div>
-          <h3 className="font-bold text-slate-900 text-sm">Patrones Activos</h3>
+          <h3 className="font-bold text-white text-sm font-['Outfit']">Patrones Activos</h3>
         </div>
-        <Badge className="bg-slate-100 text-slate-600 border border-slate-200">
+        <Badge className="bg-white/10 text-white border border-white/10">
           {schedules.length}
         </Badge>
       </div>
       
-      <div className="p-3 space-y-2 flex-1 overflow-y-auto bg-slate-50/50">
+      <div className="p-4 space-y-3 flex-1 overflow-y-auto bg-[#0c0e12]/50 custom-scrollbar">
         {isLoading ? (
            <div className="flex flex-col items-center justify-center h-40 gap-3">
-             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-teal-600"></div>
-             <span className="text-xs text-slate-400">Cargando horarios...</span>
+             <Loader2 className="w-6 h-6 text-[#2A9D8F] animate-spin" />
+             <span className="text-xs text-gray-500">Cargando horarios...</span>
            </div>
         ) : schedules.length > 0 ? (
           schedules.map((schedule) => (
-            <div key={schedule.id} className="group bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-teal-200 transition-all">
-              <div className="flex justify-between items-start mb-2.5">
+            <div key={schedule.id} className="group bg-[#13161C] p-4 rounded-xl border border-white/5 shadow-md hover:border-[#2A9D8F]/30 hover:bg-[#1A1D24] transition-all">
+              <div className="flex justify-between items-start mb-3">
                 <div className="flex gap-3 items-center">
-                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-50 to-teal-100 border border-teal-200 flex items-center justify-center text-teal-700 font-bold text-xs shadow-sm">
+                   <div className="w-10 h-10 rounded-full bg-[#0c0e12] border border-white/10 flex items-center justify-center text-[#2A9D8F] font-bold text-xs shadow-inner">
                       {schedule.employee?.nombre?.[0] || "?"}{schedule.employee?.apellido?.[0] || ""}
                    </div>
                    <div>
-                      <div className="font-bold text-sm text-slate-800 leading-tight">
+                      <div className="font-bold text-sm text-white leading-tight">
                         {schedule.employee?.nombre} {schedule.employee?.apellido}
                       </div>
-                      <div className="text-[11px] text-slate-500 font-medium">{schedule.nombre_horario}</div>
+                      <div className="text-[11px] text-gray-500 font-medium">{schedule.nombre_horario}</div>
                    </div>
                 </div>
                 <Button 
                    variant="ghost" 
                    size="icon" 
-                   className="h-7 w-7 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                   className="h-8 w-8 text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors rounded-lg"
                    onClick={() => handleDelete(schedule.id)}
                    disabled={deletingId === schedule.id}
                 >
                    {deletingId === schedule.id ? (
-                     <div className="animate-spin h-3 w-3 border-2 border-current rounded-full border-t-transparent"/>
+                     <Loader2 className="w-4 h-4 animate-spin" />
                    ) : (
-                     <Trash2 className="w-3.5 h-3.5" />
+                     <Trash2 className="w-4 h-4" />
                    )}
                 </Button>
               </div>
               
-              <div className="pl-[44px] space-y-2">
-                <div className="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 p-1.5 rounded border border-slate-100 w-fit">
-                  <Clock className="w-3 h-3 text-teal-500" />
-                  <span className="font-mono font-medium text-slate-700">
+              <div className="pl-[52px] space-y-2">
+                <div className="flex items-center gap-2 text-xs text-gray-400 bg-[#0c0e12] p-2 rounded-lg border border-white/5 w-fit">
+                  <Clock className="w-3.5 h-3.5 text-[#2A9D8F]" />
+                  <span className="font-mono font-medium text-gray-300">
                     {schedule.hora_inicio_patron?.toString().slice(0,5)} - {schedule.hora_fin_patron?.toString().slice(0,5)}
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1.5">
                     {getDaysLabel(schedule.dias_semana).split(', ').map((day, i) => (
-                        <span key={i} className="text-[10px] font-semibold text-slate-500 border border-slate-200 px-1.5 py-0.5 rounded bg-white">
+                        <span key={i} className="text-[10px] font-bold text-gray-400 border border-white/10 px-2 py-1 rounded bg-[#0c0e12]">
                             {day}
                         </span>
                     ))}
@@ -628,10 +623,10 @@ function AssignedSchedulesPanel({ schedules, onDelete, isLoading }) {
             </div>
           ))
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-slate-400 py-10">
-            <Users className="w-10 h-10 mb-3 opacity-10" />
+          <div className="flex flex-col items-center justify-center h-full text-gray-600 py-10">
+            <Users className="w-12 h-12 mb-3 opacity-20" />
             <p className="text-sm font-medium">Sin horarios asignados</p>
-            <p className="text-xs opacity-60">Selecciona otra sucursal o crea uno nuevo.</p>
+            <p className="text-xs opacity-50">Selecciona otra sucursal o crea uno nuevo.</p>
           </div>
         )}
       </div>
@@ -710,7 +705,7 @@ function AssignScheduleModal({ isOpen, onClose, branchId, employees, onSuccess }
     <Dialog open={isOpen} onClose={onClose} title="Asignar Nuevo Patrón">
       <div className="space-y-6">
         <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Empleado de la Sucursal</label>
+            <label className="text-sm font-bold text-gray-400">Empleado de la Sucursal</label>
             <SelectNative 
                 placeholder={filteredEmployees.length ? "Seleccionar empleado..." : "No hay empleados en esta sucursal"}
                 value={formData.employee_id}
@@ -719,14 +714,14 @@ function AssignScheduleModal({ isOpen, onClose, branchId, employees, onSuccess }
                 disabled={filteredEmployees.length === 0}
             />
             {filteredEmployees.length === 0 && (
-                <p className="text-xs text-amber-600 mt-1">
-                   ⚠️ No se encontraron empleados registrados en esta sucursal.
+                <p className="text-xs text-amber-500 mt-1">
+                    ⚠️ No se encontraron empleados registrados en esta sucursal.
                 </p>
             )}
         </div>
 
         <div className="space-y-3">
-            <label className="text-sm font-medium text-slate-700">Días de recurrencia</label>
+            <label className="text-sm font-bold text-gray-400">Días de recurrencia</label>
             <div className="flex flex-wrap gap-2">
                 {daysOfWeek.map(day => (
                     <button
@@ -735,8 +730,8 @@ function AssignScheduleModal({ isOpen, onClose, branchId, employees, onSuccess }
                         className={`
                             w-10 h-10 rounded-lg text-xs font-bold flex items-center justify-center transition-all border
                             ${formData.dias_semana.includes(day.id)
-                                ? "bg-teal-600 border-teal-600 text-white shadow-md shadow-teal-500/20"
-                                : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50"}
+                                ? "bg-[#2A9D8F] border-[#2A9D8F] text-white shadow-lg shadow-[#2A9D8F]/30"
+                                : "bg-[#0c0e12] border-white/10 text-gray-500 hover:border-[#2A9D8F]/50 hover:text-white"}
                         `}
                     >
                         {day.short[0]}
@@ -747,31 +742,31 @@ function AssignScheduleModal({ isOpen, onClose, branchId, employees, onSuccess }
 
         <div className="grid grid-cols-2 gap-5">
             <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Hora Inicio</label>
-                <Input type="time" value={formData.hora_inicio} onChange={e => setFormData({...formData, hora_inicio: e.target.value})} />
+                <label className="text-sm font-bold text-gray-400">Hora Inicio</label>
+                <Input type="time" value={formData.hora_inicio} onChange={e => setFormData({...formData, hora_inicio: e.target.value})} className="[color-scheme:dark]" />
             </div>
             <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Hora Fin</label>
-                <Input type="time" value={formData.hora_fin} onChange={e => setFormData({...formData, hora_fin: e.target.value})} />
+                <label className="text-sm font-bold text-gray-400">Hora Fin</label>
+                <Input type="time" value={formData.hora_fin} onChange={e => setFormData({...formData, hora_fin: e.target.value})} className="[color-scheme:dark]" />
             </div>
         </div>
 
         <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Nombre identificador</label>
+            <label className="text-sm font-bold text-gray-400">Nombre identificador</label>
             <Input 
                 placeholder="Ej: Turno Matutino Estándar" 
                 value={formData.nombre_horario}
                 onChange={e => setFormData({...formData, nombre_horario: e.target.value})}
             />
-            <p className="text-[11px] text-slate-400">Este nombre ayuda a identificar el patrón en reportes.</p>
+            <p className="text-[11px] text-gray-600">Este nombre ayuda a identificar el patrón en reportes.</p>
         </div>
 
-        <div className="pt-4 flex gap-3 justify-end border-t border-slate-100 mt-6">
-            <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
+        <div className="pt-4 flex gap-3 justify-end border-t border-white/10 mt-6">
+            <Button variant="outline" onClick={onClose} disabled={loading} className="bg-transparent border-white/10 text-gray-400 hover:text-white">Cancelar</Button>
             <Button onClick={handleSubmit} disabled={loading || !formData.employee_id}>
                 {loading ? (
                    <span className="flex items-center gap-2">
-                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                     <Loader2 className="w-4 h-4 animate-spin" />
                      Guardando...
                    </span>
                 ) : "Asignar Horario"}
@@ -791,20 +786,16 @@ export default function GestionHorariosContent() {
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   
-  // Estados de Datos
   const [branches, setBranches] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [selectedBranchId, setSelectedBranchId] = useState(null);
   
-  // Estados de UI
   const [loadingSchedules, setLoadingSchedules] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   
-  // Nuevo Estado para Detalle de Día
   const [detailModalData, setDetailModalData] = useState({ isOpen: false, date: null, events: [] });
 
-  // 1. Carga de Datos Maestros
   useEffect(() => {
     const loadMasterData = async () => {
         try {
@@ -827,7 +818,6 @@ export default function GestionHorariosContent() {
     loadMasterData();
   }, []); 
 
-  // 2. Carga de Horarios
   useEffect(() => {
     if (!selectedBranchId) return;
     
@@ -853,9 +843,6 @@ export default function GestionHorariosContent() {
     return () => { isMounted = false; };
   }, [selectedBranchId]);
 
-  // 3. Enriquecimiento de Datos (Memoizado)
-  // Cruzamos los horarios (schedules) con los empleados (employees) para tener datos completos
-  // incluso si el endpoint de schedules solo devolvía IDs.
   const enrichedSchedules = useMemo(() => {
     return schedules.map(schedule => {
         const employeeInfo = employees.find(e => e.id === schedule.employee_id) || schedule.employee || {};
@@ -922,22 +909,23 @@ export default function GestionHorariosContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 md:p-8 font-sans text-slate-900">
+    // CONTENEDOR PRINCIPAL DARK
+    <div className="min-h-screen bg-[#0c0e12] p-4 md:p-8 font-sans text-gray-200">
       <div className="max-w-[1400px] mx-auto space-y-6">
           
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2">
             <div>
-                <h1 className="text-3xl font-extrabold text-slate-900 mb-1 tracking-tight">
+                <h1 className="text-3xl font-bold text-white mb-2 tracking-tight font-['Outfit']">
                     Gestión de Turnos
                 </h1>
-                <p className="text-slate-500 font-medium text-sm">
+                <p className="text-gray-400 font-light text-sm">
                     Configura los patrones recurrentes semanales por sucursal.
                 </p>
             </div>
             <Button 
                 onClick={() => setModalOpen(true)} 
-                className="shadow-lg shadow-teal-900/10"
                 disabled={!selectedBranchId}
+                className="px-6 py-6 rounded-xl"
             >
                 <Plus className="w-5 h-5 mr-2" />
                 Nuevo Patrón
@@ -953,7 +941,7 @@ export default function GestionHorariosContent() {
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 h-[calc(100vh-240px)] min-h-[600px]">
             <div className="xl:col-span-4 h-full overflow-hidden">
                 <AssignedSchedulesPanel 
-                    schedules={enrichedSchedules} // Usamos los datos enriquecidos
+                    schedules={enrichedSchedules} 
                     onDelete={handleDeleteSchedule}
                     isLoading={loadingSchedules}
                 />
@@ -961,12 +949,12 @@ export default function GestionHorariosContent() {
 
             <div className="xl:col-span-8 h-full overflow-hidden">
                 <BranchCalendar 
-                    schedules={enrichedSchedules} // Usamos los datos enriquecidos
+                    schedules={enrichedSchedules}
                     currentYear={currentYear}
                     currentMonth={currentMonth}
                     onPrevMonth={handlePrevMonth}
                     onNextMonth={handleNextMonth}
-                    onDayClick={handleDayClick} // Nuevo Handler
+                    onDayClick={handleDayClick} 
                 />
             </div>
         </div>
@@ -981,7 +969,6 @@ export default function GestionHorariosContent() {
         onSuccess={handleCreateSuccess}
       />
 
-      {/* Nuevo Modal de Detalle */}
       <DayDetailModal 
         isOpen={detailModalData.isOpen}
         onClose={() => setDetailModalData(prev => ({ ...prev, isOpen: false }))}

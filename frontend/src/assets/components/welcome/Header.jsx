@@ -1,5 +1,6 @@
-import React from "react";
-import { Bell, Search, Menu, Settings } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Bell, Search, Menu, Settings, LogIn, ChevronDown } from "lucide-react";
 import { Badge } from "../ui/badge.jsx";
 import { Button } from "../ui/button.jsx";
 import { Input } from "../ui/input.jsx";
@@ -12,6 +13,32 @@ export function Header({
   notifications = [],
   user = { name: "Usuario", role: "", avatarUrl: "" },
 }) {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+  const navigate = useNavigate();
+
+  // Cerrar dropdown al hacer clic fuera
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    }
+
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDropdownOpen]);
+
+  const handleLoginClick = () => {
+    setIsDropdownOpen(false);
+    navigate("/login");
+  };
+
   return (
     // CAMBIO: Fondo oscuro semitransparente (Glassmorphism Dark)
     <header className="flex items-center justify-between h-20 px-6 bg-[#0c0e12]/80 backdrop-blur-md border-b border-white/10 shadow-sm relative z-20 transition-all duration-300">
@@ -85,26 +112,51 @@ export function Header({
           <Settings className="h-5 w-5 transition-colors" />
         </Button>
 
-        {/* Perfil de usuario */}
-        <div className="flex items-center gap-3 ml-2 pl-4 border-l border-white/10 cursor-pointer group">
-          <Avatar className="h-9 w-9 ring-2 ring-[#1B4F55] group-hover:ring-[#2A9D8F] transition-all">
-            {user.avatarUrl ? (
-              <AvatarImage src={user.avatarUrl} />
-            ) : (
-              <AvatarFallback className="bg-[#1B4F55] text-[#2A9D8F] text-xs font-bold">
-                {user.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
-              </AvatarFallback>
-            )}
-          </Avatar>
-          <div className="hidden sm:block">
-            <p className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors">
-                {user.name}
-            </p>
-            {user.role && <p className="text-[10px] text-gray-500 uppercase tracking-wider group-hover:text-[#2A9D8F] transition-colors">{user.role}</p>}
+        {/* Perfil de usuario con dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <div 
+            className="flex items-center gap-3 ml-2 pl-4 border-l border-white/10 cursor-pointer group"
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          >
+            <Avatar className="h-9 w-9 ring-2 ring-[#1B4F55] group-hover:ring-[#2A9D8F] transition-all">
+              {user.avatarUrl ? (
+                <AvatarImage src={user.avatarUrl} />
+              ) : (
+                <AvatarFallback className="bg-[#1B4F55] text-[#2A9D8F] text-xs font-bold">
+                  {user.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")}
+                </AvatarFallback>
+              )}
+            </Avatar>
+            <div className="hidden sm:block">
+              <p className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors">
+                  {user.name}
+              </p>
+              {user.role && <p className="text-[10px] text-gray-500 uppercase tracking-wider group-hover:text-[#2A9D8F] transition-colors">{user.role}</p>}
+            </div>
+            <ChevronDown 
+              className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${
+                isDropdownOpen ? 'rotate-180' : ''
+              }`}
+            />
           </div>
+
+          {/* Dropdown Menu */}
+          {isDropdownOpen && (
+            <div className="absolute right-0 mt-2 w-56 bg-[#0c0e12]/95 backdrop-blur-md border border-white/10 rounded-lg shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="p-2">
+                <Button
+                  onClick={handleLoginClick}
+                  className="w-full justify-start gap-3 bg-gradient-to-r from-[#2A9D8F] to-[#1B4F55] hover:from-[#239083] hover:to-[#164047] text-white font-medium transition-all duration-300 shadow-lg hover:shadow-[#2A9D8F]/20"
+                >
+                  <LogIn className="h-4 w-4" />
+                  Iniciar Sesión
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>

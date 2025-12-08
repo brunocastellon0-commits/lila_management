@@ -1,8 +1,8 @@
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"; // Asegura la ruta correcta
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Bell, TrendingUp, Package } from "lucide-react";
 
-// Datos de las novedades (sin tipado TypeScript)
+// Datos de las novedades
 const newsItems = [
   {
     id: "1",
@@ -29,7 +29,7 @@ const newsItems = [
 
 export function NewsCard() {
   
-  // Función para obtener el ícono según el tipo de novedad
+  // Función para obtener el ícono
   const getIcon = (type) => {
     switch (type) {
       case "update":
@@ -43,42 +43,52 @@ export function NewsCard() {
     }
   };
 
-  // Función para obtener las clases de color de la Badge según el tipo
+  // Función para obtener las clases de color Dark Mode
   const getBadgeColor = (type) => {
     switch (type) {
       case "update":
-        return "bg-blue-100 text-blue-700 hover:bg-blue-100";
+        // Azul/Cyan oscuro
+        return "bg-blue-500/10 text-blue-400 border border-blue-500/20";
       case "reminder":
-        return "bg-orange-100 text-orange-700 hover:bg-orange-100";
+        // Naranja/Ámbar oscuro
+        return "bg-orange-500/10 text-orange-400 border border-orange-500/20";
       case "feature":
-        return "bg-purple-100 text-purple-700 hover:bg-purple-100";
+        // Púrpura/Teal oscuro (Alineado a marca)
+        return "bg-[#2A9D8F]/10 text-[#2A9D8F] border border-[#2A9D8F]/20";
       default:
-        return "bg-gray-100 text-gray-700 hover:bg-gray-100";
+        return "bg-gray-800 text-gray-400 border border-gray-700";
     }
   };
 
   return (
-    <Card className="border-0 shadow-lg transition-shadow duration-300">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-xl font-semibold text-gray-900">Últimas Novedades</CardTitle>
+    // CAMBIO: Fondo oscuro (#13161C) con borde sutil
+    <Card className="border border-white/10 bg-[#13161C] shadow-lg shadow-black/20">
+      <CardHeader className="pb-4 border-b border-white/5">
+        <CardTitle className="text-xl font-bold text-white font-['Outfit']">Últimas Novedades</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 pt-4">
         {newsItems.map((item) => (
           <div 
             key={item.id} 
-            className="flex flex-col gap-1 pb-4 border-b border-gray-100 last:border-0 last:pb-0"
+            className="flex flex-col gap-1 pb-4 border-b border-white/5 last:border-0 last:pb-0 group"
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {/* Badge con ícono */}
-              <Badge variant="outline" className={`h-6 px-2 py-0.5 border-0 rounded-md ${getBadgeColor(item.type)}`}>
+              <Badge variant="outline" className={`h-8 w-8 p-0 flex items-center justify-center rounded-lg transition-colors ${getBadgeColor(item.type)}`}>
                 {getIcon(item.type)}
               </Badge>
               {/* Título de la novedad */}
-              <p className="text-gray-900 text-sm font-medium">{item.title}</p>
+              <p className="text-gray-200 text-sm font-semibold group-hover:text-white transition-colors">
+                {item.title}
+              </p>
             </div>
             {/* Descripción y fecha */}
-            <p className="text-gray-600 text-sm ml-8 leading-snug">{item.description}</p>
-            <p className="text-gray-400 text-xs mt-0.5 ml-8">{item.date}</p>
+            <p className="text-gray-400 text-sm ml-11 leading-snug font-light">
+              {item.description}
+            </p>
+            <p className="text-gray-600 text-xs mt-1 ml-11 font-mono">
+              {item.date}
+            </p>
           </div>
         ))}
       </CardContent>

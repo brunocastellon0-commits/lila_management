@@ -41,7 +41,8 @@ import {
   UserCheck, 
   UserX, 
   Loader2,
-  Clock 
+  Clock,
+  ShieldAlert
 } from "lucide-react";
 import { Toaster } from "../ui/sonner";
 import employeeService from "../../../api/employee_Service";
@@ -76,8 +77,6 @@ export default function GestionNominaContent() {
 
   const loadUserPermissions = () => {
     try {
-    
-      
       // ✅ NUEVO: Busca directamente en localStorage
       const userRole = localStorage.getItem('role') || localStorage.getItem('userRole');
       const roleId = userRole === 'admin' ? ROLES.ADMINISTRADOR : ROLES.MESERO;
@@ -137,7 +136,6 @@ export default function GestionNominaContent() {
   const uniqueSucursales = [...new Set(employees.map(emp => emp.sucursal?.nombre_sucursal).filter(Boolean))];
 
   const handleNewEmployee = () => {
-    // 🔐 VERIFICAR PERMISO
     if (!userPermissions.canManageEmployees) {
       toast.error("No tienes permisos para crear empleados");
       return;
@@ -147,7 +145,6 @@ export default function GestionNominaContent() {
   };
 
   const handleEditEmployee = (employee) => {
-    // 🔐 VERIFICAR PERMISO
     if (!userPermissions.canManageEmployees) {
       toast.error("No tienes permisos para editar empleados");
       return;
@@ -156,7 +153,6 @@ export default function GestionNominaContent() {
     setIsModalOpen(true);
   };
 
-  // 🔹 NUEVA FUNCIÓN para abrir horarios
   const handleOpenSchedule = (employee) => {
     setSelectedEmployeeForSchedule(employee);
     setIsScheduleModalOpen(true);
@@ -165,17 +161,14 @@ export default function GestionNominaContent() {
   const handleSaveEmployee = async (data) => {
     try {
       if (selectedEmployee) {
-        // Actualizar empleado existente
         await employeeService.updateEmployee(selectedEmployee.id, data);
         toast.success("Empleado actualizado correctamente");
       } else {
-        // Crear nuevo empleado
         await employeeService.createEmployee(data);
         toast.success("Empleado registrado correctamente");
       }
-      
       setIsModalOpen(false);
-      setRefreshTrigger(prev => prev + 1); // Recargar la lista
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error guardando empleado:', error);
       toast.error("Error al guardar el empleado", {
@@ -185,7 +178,6 @@ export default function GestionNominaContent() {
   };
 
   const handleDeleteClick = (employee) => {
-    // 🔐 VERIFICAR PERMISO
     if (!userPermissions.canManageEmployees) {
       toast.error("No tienes permisos para eliminar empleados");
       return;
@@ -201,7 +193,7 @@ export default function GestionNominaContent() {
         toast.success("Empleado eliminado correctamente");
         setDeleteDialogOpen(false);
         setEmployeeToDelete(null);
-        setRefreshTrigger(prev => prev + 1); // Recargar la lista
+        setRefreshTrigger(prev => prev + 1);
       } catch (error) {
         console.error('Error eliminando empleado:', error);
         toast.error("Error al eliminar el empleado", {
@@ -215,24 +207,20 @@ export default function GestionNominaContent() {
     toast.info(`Ver detalles de ${employee.nombre} ${employee.apellido}`);
   };
 
-  // 🔐 PANTALLA DE ACCESO DENEGADO
   if (!userPermissions.canAccessRH) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-white to-rose-50/30">
+      <div className="p-8 flex items-center justify-center min-h-screen bg-[#0c0e12]">
         <div className="text-center max-w-md">
-          <div className="bg-white rounded-2xl border border-rose-200/60 p-8 shadow-lg">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-rose-100 mb-6">
-              <div className="text-rose-500 text-2xl">🚫</div>
+          <div className="bg-[#13161C] rounded-[2rem] border border-red-900/50 p-8 shadow-2xl">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-900/20 mb-6 border border-red-500/20">
+              <ShieldAlert className="w-10 h-10 text-red-500" />
             </div>
-            <h2 className="text-2xl font-bold text-rose-700 mb-3">Acceso Restringido</h2>
-            <p className="text-rose-600 mb-4 font-medium">
+            <h2 className="text-2xl font-bold text-white mb-3 font-['Outfit']">Acceso Restringido</h2>
+            <p className="text-gray-400 mb-4 font-light">
               No tienes permisos para acceder al módulo de Recursos Humanos.
             </p>
-            <p className="text-slate-500 text-sm mb-6">
-              Este módulo está disponible solo para administradores del sistema.
-            </p>
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-              <p className="text-sm text-slate-600 font-medium">
+            <div className="bg-[#0c0e12] rounded-xl p-4 border border-white/5">
+              <p className="text-sm text-gray-500 font-medium">
                 Si necesitas acceso, contacta al administrador del sistema.
               </p>
             </div>
@@ -242,67 +230,50 @@ export default function GestionNominaContent() {
     );
   }
 
-  // Pantalla de carga
-  if (loading) {
-    return (
-      <div className="p-8 bg-gradient-to-br from-slate-50 via-white to-teal-50/30 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative inline-flex items-center justify-center mb-6">
-            <div className="animate-spin rounded-full h-20 w-20 border-4 border-slate-200"></div>
-            <div className="animate-spin rounded-full h-20 w-20 border-4 border-t-teal-500 absolute"></div>
-          </div>
-          <p className="text-slate-600 font-semibold text-xl">Cargando empleados...</p>
-          <p className="text-slate-400 text-sm mt-2">Por favor espere un momento</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-8 bg-gradient-to-br from-slate-50 via-white to-teal-50/30 min-h-screen">
+    <div className="p-8 bg-[#0c0e12] min-h-screen text-gray-200 font-sans">
+      
       {/* Encabezado */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-2 tracking-tight">
+            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight font-['Outfit']">
               Gestión de Empleados
             </h1>
-            <p className="text-slate-600 font-medium">
+            <p className="text-gray-400 font-light">
               Administra la información del personal de tu restaurante
             </p>
-            {/* 🔐 INDICADOR DE ROL */}
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-3">
               <Badge 
                 variant="outline" 
                 className={`border font-semibold ${
                   userRole === ROLES.ADMINISTRADOR 
-                    ? "border-teal-200 bg-teal-50 text-teal-700" 
-                    : "border-slate-200 bg-slate-50 text-slate-600"
+                    ? "border-[#2A9D8F]/30 bg-[#2A9D8F]/10 text-[#2A9D8F]" 
+                    : "border-gray-700 bg-gray-800 text-gray-400"
                 }`}
               >
                 {userRole === ROLES.ADMINISTRADOR ? "Administrador" : "Mesero"}
               </Badge>
               {userRole === ROLES.ADMINISTRADOR && (
-                <span className="text-xs text-teal-600 font-medium">✓ Acceso completo</span>
+                <span className="text-xs text-[#2A9D8F] font-medium">✓ Acceso completo</span>
               )}
             </div>
           </div>
           
-          {/* 🔐 BOTÓN CONDICIONAL */}
           {userPermissions.canManageEmployees ? (
             <Button 
               onClick={handleNewEmployee} 
-              className="bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white shadow-lg shadow-teal-500/30 hover:shadow-xl hover:shadow-teal-500/40 transition-all duration-300 font-semibold px-6 py-2.5 rounded-xl border border-teal-400/20"
+              className="bg-gradient-to-r from-[#1B4F55] to-[#2A9D8F] hover:from-[#2A9D8F] hover:to-[#1B4F55] text-white shadow-lg shadow-[#2A9D8F]/20 hover:shadow-[#2A9D8F]/40 transition-all duration-300 font-bold px-6 py-6 rounded-xl border border-white/10"
             >
-              <Plus className="w-4 h-4 mr-2" /> 
+              <Plus className="w-5 h-5 mr-2" /> 
               Nuevo Empleado
             </Button>
           ) : (
             <Button 
               disabled
-              className="bg-slate-300 text-slate-500 cursor-not-allowed font-semibold px-6 py-2.5 rounded-xl border border-slate-200"
+              className="bg-[#13161C] text-gray-500 cursor-not-allowed font-semibold px-6 py-6 rounded-xl border border-white/10"
             >
-              <Plus className="w-4 h-4 mr-2" /> 
+              <Plus className="w-5 h-5 mr-2" /> 
               Nuevo Empleado
             </Button>
           )}
@@ -310,89 +281,92 @@ export default function GestionNominaContent() {
         
         {/* Indicadores */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="group bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm hover:shadow-xl hover:border-teal-200 transition-all duration-300 hover:-translate-y-1">
+          <div className="group bg-[#13161C] rounded-[2rem] border border-white/10 p-6 shadow-lg shadow-black/20 hover:shadow-[0_0_20px_rgba(42,157,143,0.15)] hover:border-[#2A9D8F]/30 transition-all duration-300 hover:-translate-y-1">
             <div className="flex items-center gap-4">
-              <div className="p-3.5 bg-gradient-to-br from-slate-100 to-slate-50 rounded-xl group-hover:from-teal-50 group-hover:to-teal-100/50 transition-all duration-300 border border-slate-200/50">
-                <Users className="w-7 h-7 text-slate-700 group-hover:text-teal-600 transition-colors duration-300" />
+              <div className="p-3.5 bg-white/5 rounded-xl group-hover:bg-[#2A9D8F]/20 transition-all duration-300 border border-white/10">
+                <Users className="w-7 h-7 text-gray-400 group-hover:text-[#2A9D8F] transition-colors duration-300" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-600 mb-1">Total Empleados</p>
-                <p className="text-3xl font-bold text-slate-900">{employees.length}</p>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Total Empleados</p>
+                <p className="text-3xl font-bold text-white font-['Outfit']">{loading ? "-" : employees.length}</p>
               </div>
             </div>
           </div>
 
-          <div className="group bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm hover:shadow-xl hover:border-emerald-200 transition-all duration-300 hover:-translate-y-1">
+          <div className="group bg-[#13161C] rounded-[2rem] border border-white/10 p-6 shadow-lg shadow-black/20 hover:shadow-[0_0_20px_rgba(16,185,129,0.15)] hover:border-emerald-500/30 transition-all duration-300 hover:-translate-y-1">
             <div className="flex items-center gap-4">
-              <div className="p-3.5 bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl group-hover:shadow-md group-hover:shadow-emerald-200/50 transition-all duration-300 border border-emerald-200/50">
-                <UserCheck className="w-7 h-7 text-emerald-600" />
+              <div className="p-3.5 bg-emerald-500/10 rounded-xl group-hover:bg-emerald-500/20 transition-all duration-300 border border-emerald-500/20">
+                <UserCheck className="w-7 h-7 text-emerald-500" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-600 mb-1">Activos</p>
-                <p className="text-3xl font-bold text-slate-900">{activeCount}</p>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Activos</p>
+                <p className="text-3xl font-bold text-white font-['Outfit']">{loading ? "-" : activeCount}</p>
               </div>
             </div>
           </div>
 
-          <div className="group bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm hover:shadow-xl hover:border-rose-200 transition-all duration-300 hover:-translate-y-1">
+          <div className="group bg-[#13161C] rounded-[2rem] border border-white/10 p-6 shadow-lg shadow-black/20 hover:shadow-[0_0_20px_rgba(244,63,94,0.15)] hover:border-rose-500/30 transition-all duration-300 hover:-translate-y-1">
             <div className="flex items-center gap-4">
-              <div className="p-3.5 bg-gradient-to-br from-rose-50 to-rose-100/50 rounded-xl group-hover:shadow-md group-hover:shadow-rose-200/50 transition-all duration-300 border border-rose-200/50">
-                <UserX className="w-7 h-7 text-rose-600" />
+              <div className="p-3.5 bg-rose-500/10 rounded-xl group-hover:bg-rose-500/20 transition-all duration-300 border border-rose-500/20">
+                <UserX className="w-7 h-7 text-rose-500" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-600 mb-1">Inactivos</p>
-                <p className="text-3xl font-bold text-slate-900">{inactiveCount}</p>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Inactivos</p>
+                <p className="text-3xl font-bold text-white font-['Outfit']">{loading ? "-" : inactiveCount}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Filtros */}
-        <div className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm">
+        <div className="bg-[#13161C] rounded-[2rem] border border-white/10 p-6 shadow-lg shadow-black/20">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
               <Input
                 type="text"
                 placeholder="Buscar por nombre o email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-slate-50/50 border-slate-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all duration-200 rounded-xl h-11 font-medium text-slate-700 placeholder:text-slate-400"
+                className="pl-10 bg-[#0c0e12] border-white/10 focus:border-[#2A9D8F] focus:ring-1 focus:ring-[#2A9D8F] transition-all duration-200 rounded-xl h-11 font-medium text-white placeholder:text-gray-600"
               />
             </div>
 
+            {/* 🔥 CORRECCIÓN SELECTOR 1: PUESTO */}
             <Select value={filterPuesto} onValueChange={setFilterPuesto}>
-              <SelectTrigger className="bg-slate-50/50 border-slate-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all duration-200 rounded-xl h-11 font-medium text-slate-700">
+              <SelectTrigger className="bg-[#13161C] border-white/10 text-white focus:border-[#2A9D8F] focus:ring-1 focus:ring-[#2A9D8F] transition-all duration-200 rounded-xl h-11 font-medium">
                 <SelectValue placeholder="Puesto" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos los puestos</SelectItem>
+              <SelectContent className="bg-[#13161C] border-white/10 text-gray-200 shadow-xl z-50">
+                <SelectItem value="todos" className="text-gray-200 focus:bg-white/10 focus:text-white cursor-pointer hover:bg-white/5 hover:text-white">Todos los puestos</SelectItem>
                 {uniquePuestos.map((puesto) => (
-                  <SelectItem key={puesto} value={puesto}>{puesto}</SelectItem>
+                  <SelectItem key={puesto} value={puesto} className="text-gray-200 focus:bg-white/10 focus:text-white cursor-pointer hover:bg-white/5 hover:text-white">{puesto}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
+            {/* 🔥 CORRECCIÓN SELECTOR 2: SUCURSAL */}
             <Select value={filterSucursal} onValueChange={setFilterSucursal}>
-              <SelectTrigger className="bg-slate-50/50 border-slate-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all duration-200 rounded-xl h-11 font-medium text-slate-700">
+              <SelectTrigger className="bg-[#13161C] border-white/10 text-white focus:border-[#2A9D8F] focus:ring-1 focus:ring-[#2A9D8F] transition-all duration-200 rounded-xl h-11 font-medium">
                 <SelectValue placeholder="Sucursal" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todas las sucursales</SelectItem>
+              <SelectContent className="bg-[#13161C] border-white/10 text-gray-200 shadow-xl z-50">
+                <SelectItem value="todos" className="text-gray-200 focus:bg-white/10 focus:text-white cursor-pointer hover:bg-white/5 hover:text-white">Todas las sucursales</SelectItem>
                 {uniqueSucursales.map((sucursal) => (
-                  <SelectItem key={sucursal} value={sucursal}>{sucursal}</SelectItem>
+                  <SelectItem key={sucursal} value={sucursal} className="text-gray-200 focus:bg-white/10 focus:text-white cursor-pointer hover:bg-white/5 hover:text-white">{sucursal}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
+            {/* 🔥 CORRECCIÓN SELECTOR 3: ESTADO */}
             <Select value={filterEstado} onValueChange={setFilterEstado}>
-              <SelectTrigger className="bg-slate-50/50 border-slate-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all duration-200 rounded-xl h-11 font-medium text-slate-700">
+              <SelectTrigger className="bg-[#13161C] border-white/10 text-white focus:border-[#2A9D8F] focus:ring-1 focus:ring-[#2A9D8F] transition-all duration-200 rounded-xl h-11 font-medium">
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos los estados</SelectItem>
-                <SelectItem value="activo">Activo</SelectItem>
-                <SelectItem value="inactivo">Inactivo</SelectItem>
+              <SelectContent className="bg-[#13161C] border-white/10 text-gray-200 shadow-xl z-50">
+                <SelectItem value="todos" className="text-gray-200 focus:bg-white/10 focus:text-white cursor-pointer hover:bg-white/5 hover:text-white">Todos los estados</SelectItem>
+                <SelectItem value="activo" className="text-gray-200 focus:bg-white/10 focus:text-white cursor-pointer hover:bg-white/5 hover:text-white">Activo</SelectItem>
+                <SelectItem value="inactivo" className="text-gray-200 focus:bg-white/10 focus:text-white cursor-pointer hover:bg-white/5 hover:text-white">Inactivo</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -400,163 +374,169 @@ export default function GestionNominaContent() {
       </div>
 
       {/* Tabla */}
-      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+      <div className="bg-[#13161C] rounded-[2rem] border border-white/10 shadow-lg shadow-black/20 overflow-hidden min-h-[400px]">
         <Table>
-          <TableHeader>
-            <TableRow className="bg-gradient-to-r from-slate-50 to-teal-50/30 hover:from-slate-50 hover:to-teal-50/30 border-b border-slate-200">
-              <TableHead className="font-bold text-slate-800 text-xs uppercase tracking-wider">Foto</TableHead>
-              <TableHead className="font-bold text-slate-800 text-xs uppercase tracking-wider">Nombre Completo</TableHead>
-              <TableHead className="font-bold text-slate-800 text-xs uppercase tracking-wider">Puesto</TableHead>
-              <TableHead className="font-bold text-slate-800 text-xs uppercase tracking-wider">Rol</TableHead>
-              <TableHead className="font-bold text-slate-800 text-xs uppercase tracking-wider">Sucursal</TableHead>
-              <TableHead className="font-bold text-slate-800 text-xs uppercase tracking-wider">Fecha de Ingreso</TableHead>
-              <TableHead className="font-bold text-slate-800 text-xs uppercase tracking-wider">Estado</TableHead>
-              <TableHead className="text-right font-bold text-slate-800 text-xs uppercase tracking-wider">Acciones</TableHead>
+          {/* 🔥 CORRECCIÓN HEADER: Fondo oscuro fijo */}
+          <TableHeader className="bg-[#13161C]">
+            <TableRow className="bg-[#13161C] hover:bg-[#13161C] border-b border-white/10">
+              <TableHead className="font-bold text-gray-400 text-xs uppercase tracking-wider py-5 pl-4">Foto</TableHead>
+              <TableHead className="font-bold text-gray-400 text-xs uppercase tracking-wider">Nombre Completo</TableHead>
+              <TableHead className="font-bold text-gray-400 text-xs uppercase tracking-wider">Puesto</TableHead>
+              <TableHead className="font-bold text-gray-400 text-xs uppercase tracking-wider">Rol</TableHead>
+              <TableHead className="font-bold text-gray-400 text-xs uppercase tracking-wider">Sucursal</TableHead>
+              <TableHead className="font-bold text-gray-400 text-xs uppercase tracking-wider">Fecha de Ingreso</TableHead>
+              <TableHead className="font-bold text-gray-400 text-xs uppercase tracking-wider">Estado</TableHead>
+              <TableHead className="text-right font-bold text-gray-400 text-xs uppercase tracking-wider pr-6">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredEmployees.map((employee) => (
-              <TableRow key={employee.id} className="hover:bg-teal-50/30 border-slate-100 transition-colors duration-150">
-                <TableCell className="py-4">
-                  <Avatar className="w-11 h-11 border-2 border-teal-100 shadow-sm">
-                    <AvatarImage src={employee.foto} alt={`${employee.nombre} ${employee.apellido}`} />
-                    <AvatarFallback className="bg-gradient-to-br from-teal-100 to-teal-50 text-teal-700 font-bold text-sm">
-                      {employee.nombre?.[0]}{employee.apellido?.[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                </TableCell>
-                <TableCell className="py-4">
-                  <div>
-                    <p className="font-bold text-slate-900">{employee.nombre} {employee.apellido}</p>
-                    <p className="text-sm text-slate-500 font-medium">{employee.email}</p>
-                  </div>
-                </TableCell>
-                <TableCell className="font-semibold text-slate-700 py-4">{employee.puesto}</TableCell>
-                <TableCell className="font-semibold text-slate-700 py-4">
-                  {employee.role?.rol || employee.rol?.rol}
-                </TableCell>
-                <TableCell className="font-semibold text-slate-700 py-4">
-                  {employee.sucursal?.nombre_sucursal}
-                </TableCell>
-                <TableCell className="font-semibold text-slate-700 py-4">
-                  {employee.fecha_ingreso &&
-                    new Date(employee.fecha_ingreso).toLocaleDateString("es-ES", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                </TableCell>
-                <TableCell className="py-4">
-                  <Badge
-                    variant={employee.is_active ? "default" : "secondary"}
-                    className={
-                      employee.is_active
-                        ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 font-bold border border-emerald-200 px-3 py-1.5 rounded-lg shadow-sm"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-100 font-bold border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm"
-                    }
-                  >
-                    {employee.is_active ? "Activo" : "Inactivo"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="py-4">
-                  <div className="flex justify-end gap-2">
-                    {/* 🔹 BOTÓN PARA HORARIOS (SIEMPRE DISPONIBLE) */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleOpenSchedule(employee)}
-                      className="hover:bg-purple-50 hover:text-purple-700 text-slate-500 transition-all duration-200 rounded-lg"
-                      title="Gestionar horarios"
+            {loading ? (
+               <TableRow className="hover:bg-transparent">
+                 <TableCell colSpan={8} className="h-64 text-center">
+                    <div className="flex flex-col items-center justify-center gap-4">
+                       <Loader2 className="h-10 w-10 text-[#2A9D8F] animate-spin" />
+                       <p className="text-gray-500 text-sm font-medium">Sincronizando empleados...</p>
+                    </div>
+                 </TableCell>
+               </TableRow>
+            ) : filteredEmployees.length === 0 ? (
+               <TableRow className="hover:bg-transparent">
+                 <TableCell colSpan={8} className="h-64 text-center">
+                    <div className="flex flex-col items-center justify-center gap-4">
+                       <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                          <Users className="w-8 h-8 text-gray-600" />
+                       </div>
+                       <p className="text-gray-400 font-medium">No se encontraron empleados</p>
+                    </div>
+                 </TableCell>
+               </TableRow>
+            ) : (
+              filteredEmployees.map((employee) => (
+                // 🔥 CORRECCIÓN FILA: Se eliminó el fondo blanco predeterminado. Ahora es transparente/gris oscuro
+                <TableRow key={employee.id} className="bg-transparent hover:bg-white/5 border-b border-white/5 transition-colors duration-150">
+                  <TableCell className="py-4 pl-4">
+                    <Avatar className="w-11 h-11 border-2 border-[#2A9D8F]/50 shadow-sm">
+                      <AvatarImage src={employee.foto} alt={`${employee.nombre} ${employee.apellido}`} />
+                      <AvatarFallback className="bg-[#1B4F55] text-[#2A9D8F] font-bold text-sm">
+                        {employee.nombre?.[0]}{employee.apellido?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                  </TableCell>
+                  <TableCell className="py-4">
+                    <div>
+                      <p className="font-bold text-white">{employee.nombre} {employee.apellido}</p>
+                      <p className="text-sm text-gray-500 font-medium">{employee.email}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-medium text-gray-300 py-4">{employee.puesto}</TableCell>
+                  <TableCell className="font-medium text-gray-300 py-4">
+                    {employee.role?.rol || employee.rol?.rol}
+                  </TableCell>
+                  <TableCell className="font-medium text-gray-300 py-4">
+                    {employee.sucursal?.nombre_sucursal}
+                  </TableCell>
+                  <TableCell className="font-medium text-gray-300 py-4">
+                    {employee.fecha_ingreso &&
+                      new Date(employee.fecha_ingreso).toLocaleDateString("es-ES", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                  </TableCell>
+                  <TableCell className="py-4">
+                    <Badge
+                      variant={employee.is_active ? "default" : "secondary"}
+                      className={
+                        employee.is_active
+                          ? "bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20 px-3 py-1.5 rounded-lg shadow-sm"
+                          : "bg-gray-700/50 text-gray-400 font-bold border border-gray-600 px-3 py-1.5 rounded-lg shadow-sm"
+                      }
                     >
-                      <Clock className="w-4 h-4" />
-                    </Button>
-                    
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleViewEmployee(employee)}
-                      className="hover:bg-teal-50 hover:text-teal-700 text-slate-500 transition-all duration-200 rounded-lg"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    
-                    {/* 🔐 BOTONES CONDICIONALES */}
-                    {userPermissions.canManageEmployees ? (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditEmployee(employee)}
-                          className="hover:bg-blue-50 hover:text-blue-700 text-slate-500 transition-all duration-200 rounded-lg"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteClick(employee)}
-                          className="hover:bg-rose-50 hover:text-rose-700 text-slate-500 transition-all duration-200 rounded-lg"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          disabled
-                          className="text-slate-300 cursor-not-allowed"
-                          title="Sin permisos para editar"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          disabled
-                          className="text-slate-300 cursor-not-allowed"
-                          title="Sin permisos para eliminar"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                      {employee.is_active ? "Activo" : "Inactivo"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="py-4 pr-4">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleOpenSchedule(employee)}
+                        className="hover:bg-[#2A9D8F]/20 hover:text-[#2A9D8F] text-gray-400 transition-all duration-200 rounded-lg"
+                        title="Gestionar horarios"
+                      >
+                        <Clock className="w-4 h-4" />
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleViewEmployee(employee)}
+                        className="hover:bg-blue-500/20 hover:text-blue-400 text-gray-400 transition-all duration-200 rounded-lg"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      
+                      {userPermissions.canManageEmployees ? (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditEmployee(employee)}
+                            className="hover:bg-amber-500/20 hover:text-amber-400 text-gray-400 transition-all duration-200 rounded-lg"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteClick(employee)}
+                            className="hover:bg-red-500/20 hover:text-red-400 text-gray-400 transition-all duration-200 rounded-lg"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled
+                            className="text-gray-700 cursor-not-allowed"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled
+                            className="text-gray-700 cursor-not-allowed"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
 
-        {filteredEmployees.length === 0 && (
-          <div className="text-center py-16">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
-              <Users className="w-8 h-8 text-slate-400" />
-            </div>
-            <p className="text-lg font-bold text-slate-700 mb-1">No se encontraron empleados</p>
-            <p className="text-sm text-slate-500 font-medium">
-              {employees.length === 0 
-                ? "Comienza agregando tu primer empleado"
-                : "Intenta ajustar los filtros de búsqueda"}
-            </p>
-          </div>
-        )}
-
         {/* Paginación */}
-        {filteredEmployees.length > 0 && (
-          <div className="border-t border-slate-200 px-6 py-5 flex items-center justify-between bg-slate-50/50">
-            <p className="text-sm font-semibold text-slate-600">
-              Mostrando <span className="text-teal-600">{filteredEmployees.length}</span> de <span className="text-teal-600">{employees.length}</span> empleados
+        {!loading && filteredEmployees.length > 0 && (
+          <div className="border-t border-white/10 px-6 py-5 flex items-center justify-between bg-[#0c0e12]/50">
+            <p className="text-sm font-semibold text-gray-500">
+              Mostrando <span className="text-[#2A9D8F]">{filteredEmployees.length}</span> de <span className="text-[#2A9D8F]">{employees.length}</span> empleados
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled className="text-slate-500 border-slate-200 rounded-lg font-semibold">
+              <Button variant="outline" size="sm" disabled className="text-gray-600 border-white/10 bg-transparent rounded-lg font-semibold cursor-not-allowed">
                 Anterior
               </Button>
-              <Button variant="outline" size="sm" className="bg-gradient-to-r from-teal-600 to-teal-500 text-white border-teal-500 font-bold rounded-lg shadow-sm hover:shadow-md transition-all duration-200">
+              <Button variant="outline" size="sm" className="bg-[#2A9D8F] text-white border-[#2A9D8F] font-bold rounded-lg shadow-sm hover:bg-[#1B4F55] transition-all duration-200">
                 1
               </Button>
-              <Button variant="outline" size="sm" disabled className="text-slate-500 border-slate-200 rounded-lg font-semibold">
+              <Button variant="outline" size="sm" disabled className="text-gray-600 border-white/10 bg-transparent rounded-lg font-semibold cursor-not-allowed">
                 Siguiente
               </Button>
             </div>
@@ -564,19 +544,18 @@ export default function GestionNominaContent() {
         )}
       </div>
 
-      {/* Modal de empleado - 🔐 SOLO SI TIENE PERMISOS */}
+      {/* Modales y Dialogs (Se mantienen igual, solo fondo ajustado en contenedor si era necesario) */}
       {isModalOpen && userPermissions.canManageEmployees && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300"
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300"
             onClick={() => setIsModalOpen(false)}
           ></div>
 
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 scale-100 max-h-[90vh] overflow-hidden border border-slate-200">
+          <div className="relative bg-[#13161C] rounded-[2rem] shadow-2xl w-full max-w-2xl transform transition-all duration-300 scale-100 max-h-[90vh] overflow-hidden border border-white/10">
             <button
-              className="absolute top-4 right-4 z-10 text-slate-400 hover:text-slate-700 bg-white rounded-xl p-2 shadow-lg hover:shadow-xl transition-all duration-200 border border-slate-200"
+              className="absolute top-4 right-4 z-10 text-gray-400 hover:text-white bg-[#0c0e12] rounded-xl p-2 shadow-lg border border-white/10 transition-all duration-200"
               onClick={() => setIsModalOpen(false)}
-              aria-label="Cerrar"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
@@ -594,19 +573,17 @@ export default function GestionNominaContent() {
         </div>
       )}
 
-      {/* 🔹 MODAL PARA HORARIOS (SIEMPRE DISPONIBLE) */}
       {isScheduleModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300"
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300"
             onClick={() => setIsScheduleModalOpen(false)}
           ></div>
 
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-7xl transform transition-all duration-300 scale-100 max-h-[95vh] overflow-hidden border border-slate-200">
+          <div className="relative bg-[#13161C] rounded-[2rem] shadow-2xl w-full max-w-7xl transform transition-all duration-300 scale-100 max-h-[95vh] overflow-hidden border border-white/10">
             <button
-              className="absolute top-4 right-4 z-10 text-slate-400 hover:text-slate-700 bg-white rounded-xl p-2 shadow-lg hover:shadow-xl transition-all duration-200 border border-slate-200"
+              className="absolute top-4 right-4 z-10 text-gray-400 hover:text-white bg-[#0c0e12] rounded-xl p-2 shadow-lg border border-white/10 transition-all duration-200"
               onClick={() => setIsScheduleModalOpen(false)}
-              aria-label="Cerrar"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
@@ -615,10 +592,10 @@ export default function GestionNominaContent() {
 
             <div className="overflow-y-auto max-h-[95vh]">
               <div className="p-6">
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                <h2 className="text-2xl font-bold text-white mb-2 font-['Outfit']">
                   Horarios de {selectedEmployeeForSchedule?.nombre} {selectedEmployeeForSchedule?.apellido}
                 </h2>
-                <p className="text-slate-600 mb-6">
+                <p className="text-gray-400 mb-6 font-light">
                   Gestiona los turnos y horarios del empleado
                 </p>
                 <GestionHorariosContent />
@@ -628,27 +605,26 @@ export default function GestionNominaContent() {
         </div>
       )}
 
-      {/* Dialog de eliminación - 🔐 SOLO SI TIENE PERMISOS */}
       {deleteDialogOpen && userPermissions.canManageEmployees && (
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent className="rounded-2xl border-slate-200">
+          <AlertDialogContent className="rounded-[2rem] border-white/10 bg-[#13161C] shadow-2xl">
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-xl font-bold text-slate-900">¿Estás seguro?</AlertDialogTitle>
-              <AlertDialogDescription className="text-sm text-slate-600 font-medium">
+              <AlertDialogTitle className="text-xl font-bold text-white font-['Outfit']">¿Estás seguro?</AlertDialogTitle>
+              <AlertDialogDescription className="text-sm text-gray-400 font-light">
                 Esta acción no se puede deshacer. El empleado{" "}
-                <span className="font-bold text-slate-900">
+                <span className="font-bold text-white">
                   {employeeToDelete?.nombre} {employeeToDelete?.apellido}
                 </span>{" "}
                 será eliminado permanentemente del sistema.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className="font-bold border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl">
+              <AlertDialogCancel className="font-bold border-white/10 text-gray-300 hover:bg-white/5 hover:text-white rounded-xl bg-transparent">
                 Cancelar
               </AlertDialogCancel>
               <AlertDialogAction 
                 onClick={handleConfirmDelete} 
-                className="bg-gradient-to-r from-rose-600 to-rose-500 text-white hover:from-rose-700 hover:to-rose-600 font-bold shadow-lg shadow-rose-500/30 rounded-xl"
+                className="bg-gradient-to-r from-red-600 to-rose-600 text-white hover:from-red-700 hover:to-rose-700 font-bold shadow-lg shadow-red-600/20 rounded-xl border border-white/10"
               >
                 Eliminar
               </AlertDialogAction>

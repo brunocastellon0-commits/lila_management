@@ -168,33 +168,36 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
     }
   };
 
-  const inputClass = "w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 focus:bg-white disabled:bg-slate-100 disabled:cursor-not-allowed transition-all duration-200 text-slate-700 font-medium placeholder:text-slate-400";
-  const errorClass = "border-rose-400 focus:ring-rose-400 focus:border-rose-400 bg-rose-50/50";
-  const labelClass = "text-slate-700 mb-2 block font-bold text-sm tracking-wide";
+  // ESTILOS DARK MODE
+  const inputClass = "w-full px-4 py-3 rounded-xl border border-white/10 bg-[#0c0e12] focus:outline-none focus:ring-1 focus:ring-[#2A9D8F] focus:border-[#2A9D8F] disabled:bg-white/5 disabled:cursor-not-allowed transition-all duration-200 text-white font-medium placeholder:text-gray-600";
+  const errorClass = "border-rose-500/50 focus:ring-rose-500 focus:border-rose-500 bg-rose-500/5";
+  const labelClass = "text-gray-300 mb-2 block font-bold text-sm tracking-wide";
 
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl p-8 w-full max-w-2xl flex justify-center items-center min-h-[500px]">
+      <div className="bg-[#13161C] rounded-[2rem] p-8 w-full max-w-2xl flex justify-center items-center min-h-[500px] border border-white/10">
         <div className="text-center">
           <div className="relative inline-flex items-center justify-center mb-6">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-slate-200"></div>
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-t-teal-500 absolute"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-white/10"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-t-[#2A9D8F] absolute"></div>
           </div>
-          <p className="text-slate-600 font-semibold text-lg">Cargando datos iniciales...</p>
-          <p className="text-slate-400 text-sm mt-2">Por favor espere un momento</p>
+          <p className="text-white font-semibold text-lg font-['Outfit']">Cargando datos iniciales...</p>
+          <p className="text-gray-500 text-sm mt-2">Por favor espere un momento</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gradient-to-br from-white via-slate-50/30 to-teal-50/20 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl border border-slate-200/60">
+    // CONTENEDOR MODAL DARK
+    <div className="bg-[#13161C] rounded-[2rem] w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl shadow-black/50 border border-white/10">
+      
       {/* Header del modal */}
-      <div className="bg-gradient-to-r from-teal-600 to-teal-500 px-8 py-6 border-b border-teal-400/20">
-        <h2 className="text-2xl font-bold text-white tracking-tight">
+      <div className="bg-gradient-to-r from-[#1B4F55] to-[#2A9D8F] px-8 py-6 border-b border-white/10">
+        <h2 className="text-2xl font-bold text-white tracking-tight font-['Outfit']">
           Registrar Nuevo Empleado
         </h2>
-        <p className="text-teal-50 text-sm mt-1 font-medium">Complete la información del nuevo miembro del equipo</p>
+        <p className="text-teal-100 text-sm mt-1 font-medium opacity-90">Complete la información del nuevo miembro del equipo</p>
       </div>
 
       {/* Body del modal con scroll */}
@@ -218,7 +221,7 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
                 disabled={submitLoading}
               />
               {errors.nombre && (
-                <span className="text-rose-600 text-xs mt-1.5 block font-semibold flex items-center gap-1">
+                <span className="text-rose-400 text-xs mt-1.5 block font-semibold flex items-center gap-1">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
@@ -243,7 +246,7 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
                 disabled={submitLoading}
               />
               {errors.apellido && (
-                <span className="text-rose-600 text-xs mt-1.5 block font-semibold flex items-center gap-1">
+                <span className="text-rose-400 text-xs mt-1.5 block font-semibold flex items-center gap-1">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
@@ -269,7 +272,7 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
               disabled={submitLoading}
             />
             {errors.email && (
-              <span className="text-rose-600 text-xs mt-1.5 block font-semibold flex items-center gap-1">
+              <span className="text-rose-400 text-xs mt-1.5 block font-semibold flex items-center gap-1">
                 <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
@@ -294,7 +297,7 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
                 disabled={submitLoading}
               />
               {errors.password && (
-                <span className="text-rose-600 text-xs mt-1.5 block font-semibold flex items-center gap-1">
+                <span className="text-rose-400 text-xs mt-1.5 block font-semibold flex items-center gap-1">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
@@ -317,7 +320,7 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
                 disabled={submitLoading}
               />
               {errors.confirmPassword && (
-                <span className="text-rose-600 text-xs mt-1.5 block font-semibold flex items-center gap-1">
+                <span className="text-rose-400 text-xs mt-1.5 block font-semibold flex items-center gap-1">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
@@ -345,7 +348,7 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
                 disabled={submitLoading}
               />
               {errors.puesto && (
-                <span className="text-rose-600 text-xs mt-1.5 block font-semibold flex items-center gap-1">
+                <span className="text-rose-400 text-xs mt-1.5 block font-semibold flex items-center gap-1">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
@@ -373,7 +376,7 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
                 <option value="4">Supervisor</option>
               </select>
               {errors.rol_id && (
-                <span className="text-rose-600 text-xs mt-1.5 block font-semibold flex items-center gap-1">
+                <span className="text-rose-400 text-xs mt-1.5 block font-semibold flex items-center gap-1">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
@@ -402,7 +405,7 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
               <option value="4">Zona Este</option>
             </select>
             {errors.sucursal_id && (
-              <span className="text-rose-600 text-xs mt-1.5 block font-semibold flex items-center gap-1">
+              <span className="text-rose-400 text-xs mt-1.5 block font-semibold flex items-center gap-1">
                 <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
@@ -423,11 +426,11 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
                 name="fecha_ingreso"
                 value={formData.fecha_ingreso}
                 onChange={handleChange}
-                className={`${inputClass} ${errors.fecha_ingreso ? errorClass : ""}`}
+                className={`${inputClass} ${errors.fecha_ingreso ? errorClass : ""} [color-scheme:dark]`}
                 disabled={submitLoading}
               />
               {errors.fecha_ingreso && (
-                <span className="text-rose-600 text-xs mt-1.5 block font-semibold flex items-center gap-1">
+                <span className="text-rose-400 text-xs mt-1.5 block font-semibold flex items-center gap-1">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
@@ -452,9 +455,9 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
                 max="100"
                 disabled={submitLoading}
               />
-              <p className="text-xs text-slate-500 mt-1.5 font-medium">Valor entre 1 y 100 (predeterminado: 50)</p>
+              <p className="text-xs text-gray-500 mt-1.5 font-medium">Valor entre 1 y 100 (predeterminado: 50)</p>
               {errors.desempeño_score && (
-                <span className="text-rose-600 text-xs mt-1.5 block font-semibold flex items-center gap-1">
+                <span className="text-rose-400 text-xs mt-1.5 block font-semibold flex items-center gap-1">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
@@ -465,10 +468,10 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
           </div>
 
           {/* Divisor visual */}
-          <div className="border-t border-slate-200 pt-2"></div>
+          <div className="border-t border-white/10 pt-2"></div>
 
           {/* Tipo de salario con mejor diseño */}
-          <div className="bg-teal-50/50 border border-teal-200/60 rounded-xl p-4">
+          <div className="bg-[#2A9D8F]/10 border border-[#2A9D8F]/20 rounded-xl p-4">
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
@@ -476,26 +479,26 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
                 name="es_salario_fijo"
                 checked={formData.es_salario_fijo}
                 onChange={handleChange}
-                className="h-5 w-5 text-teal-600 focus:ring-teal-500 focus:ring-2 border-slate-300 rounded cursor-pointer"
+                className="h-5 w-5 text-[#2A9D8F] bg-[#0c0e12] border-gray-600 rounded cursor-pointer accent-[#2A9D8F]"
                 disabled={submitLoading}
               />
-              <label htmlFor="es_salario_fijo" className="text-slate-700 font-bold select-none cursor-pointer">
+              <label htmlFor="es_salario_fijo" className="text-white font-bold select-none cursor-pointer">
                 ¿El empleado tiene salario fijo?
               </label>
             </div>
-            <p className="text-xs text-slate-500 mt-2 ml-8 font-medium">
+            <p className="text-xs text-gray-400 mt-2 ml-8 font-medium">
               Marque esta opción si el empleado tiene un salario mensual fijo en lugar de tarifa por hora
             </p>
           </div>
 
           {/* Tarifa por hora (solo si no es salario fijo) */}
           {!formData.es_salario_fijo && (
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
+            <div className="bg-[#0c0e12] border border-white/10 rounded-xl p-5">
               <label className={labelClass}>
                 Tarifa por hora <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-500 font-bold">Bs.</span>
+                <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-bold">Bs.</span>
                 <input
                   type="number"
                   step="0.01"
@@ -508,7 +511,7 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
                 />
               </div>
               {errors.tarifa_hora && (
-                <span className="text-rose-600 text-xs mt-1.5 block font-semibold flex items-center gap-1">
+                <span className="text-rose-400 text-xs mt-1.5 block font-semibold flex items-center gap-1">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
@@ -521,11 +524,11 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
       </div>
 
       {/* Footer con botones de acción */}
-      <div className="bg-slate-50/80 border-t border-slate-200 px-8 py-5 flex justify-end gap-3">
+      <div className="bg-[#13161C] border-t border-white/10 px-8 py-5 flex justify-end gap-3">
         <button 
           type="button" 
           onClick={onCancel}
-          className="px-6 py-3 rounded-xl font-bold text-slate-700 bg-white border-2 border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow disabled:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+          className="px-6 py-3 rounded-xl font-bold text-gray-300 bg-transparent border border-white/10 hover:bg-white/5 hover:text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={submitLoading}
         >
           Cancelar
@@ -534,7 +537,7 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
           type="submit" 
           onClick={handleSubmit}
           disabled={submitLoading}
-          className="px-6 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 transition-all duration-200 shadow-lg shadow-teal-500/30 hover:shadow-xl hover:shadow-teal-500/40 disabled:from-slate-400 disabled:to-slate-300 disabled:cursor-not-allowed disabled:shadow-none flex items-center gap-2"
+          className="px-6 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-[#1B4F55] to-[#2A9D8F] hover:from-[#2A9D8F] hover:to-[#1B4F55] transition-all duration-200 shadow-lg shadow-[#2A9D8F]/20 hover:shadow-[#2A9D8F]/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center gap-2"
         >
           {submitLoading ? (
             <>

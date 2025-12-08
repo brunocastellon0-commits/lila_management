@@ -6,13 +6,12 @@ function Table({ className = "", ...props }) {
   return (
     <div
       data-slot="table-container"
-      // CORRECCIÓN CLAVE: Uso de backticks (``)
       className={`relative w-full overflow-x-auto ${className}`}
     >
       <table
         data-slot="table"
-        // CORRECCIÓN CLAVE: Uso de backticks (``)
-        className={`w-full caption-bottom text-sm bg-white rounded-xl border border-gray-200 shadow-sm ${className}`}
+        // CAMBIO: Fondo oscuro, borde sutil, texto blanco base
+        className={`w-full caption-bottom text-sm bg-[#13161C] rounded-2xl border border-white/10 text-gray-200 shadow-lg ${className}`}
         {...props}
       />
     </div>
@@ -23,8 +22,8 @@ function TableHeader({ className = "", ...props }) {
   return (
     <thead
       data-slot="table-header"
-      // CORRECCIÓN CLAVE: Uso de backticks (``)
-      className={`[&_tr]:border-b bg-gray-100 ${className}`}
+      // CAMBIO: Fondo oscuro (igual que la tabla) y borde inferior sutil
+      className={`[&_tr]:border-b border-white/10 bg-[#13161C] ${className}`}
       {...props}
     />
   );
@@ -34,7 +33,6 @@ function TableBody({ className = "", ...props }) {
   return (
     <tbody
       data-slot="table-body"
-      // CORRECCIÓN CLAVE: Uso de backticks (``)
       className={`[&_tr:last-child]:border-0 ${className}`}
       {...props}
     />
@@ -45,8 +43,8 @@ function TableFooter({ className = "", ...props }) {
   return (
     <tfoot
       data-slot="table-footer"
-      // CORRECCIÓN CLAVE: Uso de backticks (``)
-      className={`bg-gray-100 border-t border-gray-200 font-medium [&>tr]:last:border-b-0 ${className}`}
+      // CAMBIO: Fondo oscuro y textos claros
+      className={`bg-[#13161C] border-t border-white/10 font-medium text-gray-400 [&>tr]:last:border-b-0 ${className}`}
       {...props}
     />
   );
@@ -56,8 +54,8 @@ function TableRow({ className = "", ...props }) {
   return (
     <tr
       data-slot="table-row"
-      // CORRECCIÓN CLAVE: Uso de backticks (``)
-      className={`hover:bg-gray-50 data-[state=selected]:bg-gray-100 border-b border-gray-200 transition-colors duration-200 ${className}`}
+      // CAMBIO: Hover sutil blanco (white/5) y borde casi invisible
+      className={`hover:bg-white/5 data-[state=selected]:bg-white/5 border-b border-white/5 transition-colors duration-200 ${className}`}
       {...props}
     />
   );
@@ -67,8 +65,8 @@ function TableHead({ className = "", ...props }) {
   return (
     <th
       data-slot="table-head"
-      // CORRECCIÓN CLAVE: Uso de backticks (``)
-      className={`text-gray-900 h-12 px-4 py-2 text-left align-middle font-semibold whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] ${className}`}
+      // CAMBIO: Texto gris medio para los títulos
+      className={`text-gray-400 h-12 px-4 py-2 text-left align-middle font-bold text-xs uppercase tracking-wider whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] ${className}`}
       {...props}
     />
   );
@@ -78,8 +76,8 @@ function TableCell({ className = "", ...props }) {
   return (
     <td
       data-slot="table-cell"
-      // CORRECCIÓN CLAVE: Uso de backticks (``)
-      className={`p-4 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-gray-900 font-medium ${className}`}
+      // CAMBIO: Texto blanco/gris claro para el contenido
+      className={`p-4 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-gray-300 font-medium ${className}`}
       {...props}
     />
   );
@@ -89,8 +87,7 @@ function TableCaption({ className = "", ...props }) {
   return (
     <caption
       data-slot="table-caption"
-      // CORRECCIÓN CLAVE: Uso de backticks (``)
-      className={`text-gray-600 mt-4 text-sm ${className}`}
+      className={`text-gray-500 mt-4 text-sm ${className}`}
       {...props}
     />
   );
