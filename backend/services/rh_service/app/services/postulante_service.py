@@ -32,44 +32,120 @@ class PostulanteService:
             return ""
         return texto_completo
 
+    def _cargar_ejemplos_dataset(self, num_ejemplos: int = 5) -> str:
+        """
+        Carga ejemplos del dataset para Few-Shot Learning.
+        FEW-SHOT LEARNING: El modelo aprende de ejemplos sin fine-tuning.
+        """
+        dataset_path = os.path.join(os.path.dirname(__file__), '..', '..', 'dataset.jsonl')
+        
+        if not os.path.exists(dataset_path):
+            print(f"⚠️ Dataset no encontrado en {dataset_path}")
+            return ""
+        
+        ejemplos = []
+        try:
+            import random
+            with open(dataset_path, 'r', encoding='utf-8') as f:
+                all_lines = f.readlines()
+            
+            # Seleccionar ejemplos aleatorios
+            selected_lines = random.sample(all_lines, min(num_ejemplos, len(all_lines)))
+            
+            for i, line in enumerate(selected_lines, 1):
+                data = json.loads(line)
+                ejemplo_texto = f"""
+EJEMPLO {i}:
+CV:
+{data['input']}
+
+ANÁLISIS ESPERADO:
+{data['output']}
+"""
+                ejemplos.append(ejemplo_texto)
+            
+            return "\n".join(ejemplos)
+        except Exception as e:
+            print(f"Error cargando dataset: {e}")
+            return ""
+    
     def _analizar_con_ollama(self, texto_cv: str, descripcion_puesto: str = "Puesto genérico en restaurante") -> dict:
         """
-        Envía el texto a Ollama (Llama 3.1) y fuerza una respuesta JSON estructurada.
+        Análisis con Few-Shot Learning + RAG.
+        
+        TÉCNICA: En lugar de fine-tuning, inyectamos ejemplos del dataset
+        en cada consulta para que el modelo "aprenda en el momento".
+        Esto se conoce como Few-Shot Learning o In-Context Learning.
         """
-        prompt = f"""
-        Actúa como un reclutador experto para un restaurante. Analiza el siguiente CV.
+        # Cargar ejemplos del dataset
+        ejemplos = self._cargar_ejemplos_dataset(num_ejemplos=5)
         
-        DESCRIPCIÓN DEL PUESTO:
-        {descripcion_puesto}
-        
-        CV DEL CANDIDATO:
-        {texto_cv}
-        
-        INSTRUCCIONES:
-        1. Extrae el nombre del candidato (si no está, pon "Desconocido").
-        2. Evalúa sus habilidades.
-        3. Asigna un puntaje de 0 a 100 basado en relevancia para el puesto.
-        4. Decide si es APTO para una entrevista.
-        
-        Responde ÚNICAMENTE con este formato JSON:
-        {{
-            "nombre": "Nombre detectado",
-            "puntuacion": 85,
-            "razonamiento": "Resumen breve de 2 lineas sobre sus habilidades.",
-            "es_apto": true
-        }}
-        """
+        prompt = f"""Eres un reclutador experto especializado en el sector gastronómico boliviano.
+
+Tu tarea es analizar CVs de candidatos para restaurantes y evaluar su idoneidad.
+
+A continuación verás EJEMPLOS de cómo analizar CVs correctamente. Estudia estos ejemplos y luego analiza el nuevo CV siguiendo el mismo criterio:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📚 EJEMPLOS DE ANÁLISIS DE CVs:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{ejemplos}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 AHORA ANALIZA ESTE NUEVO CV:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DESCRIPCIÓN DEL PUESTO:
+{descripcion_puesto}
+
+CV DEL CANDIDATO:
+{texto_cv}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CRITERIOS DE EVALUACIÓN:
+- Experiencia previa en gastronomía (restaurantes, hoteles, catering)
+- Formación técnica o académica relevante
+- Habilidades específicas del puesto
+- Actitud y disposición demostrada
+- Certificaciones (manipulación de alimentos, cursos, idiomas)
+
+PUNTUACIÓN (0-100):
+- 90-100: Candidato excepcional, experiencia extensa
+- 70-89: Buen candidato, experiencia sólida
+- 50-69: Candidato con potencial, requiere capacitación
+- 30-49: Candidato con limitaciones
+- 0-29: No apto, sin experiencia relevante
+
+ES_APTO:
+- true: Si puede aportar valor (puntuación >= 45)
+- false: Si no tiene experiencia relevante
+
+Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta:
+{{
+    "nombre": "nombre completo del candidato",
+    "puntuacion": número entre 0 y 100,
+    "razonamiento": "explicación breve de 1-2 líneas",
+    "es_apto": true o false
+}}"""
         
         try:
             response = ollama.chat(
                 model='llama3.1:8b', 
                 messages=[{'role': 'user', 'content': prompt}],
                 format='json', 
-                options={'temperature': 0.1}
+                options={
+                    'temperature': 0.1,  # Baja temperatura para respuestas consistentes
+                    'top_p': 0.9,
+                    'top_k': 40
+                }
             )
-            return json.loads(response['message']['content'])
+            resultado = json.loads(response['message']['content'])
+            print(f"✓ Análisis IA completado: {resultado.get('nombre', 'N/A')} - {resultado.get('puntuacion', 0)}/100")
+            return resultado
         except Exception as e:
-            print(f"Error en Ollama: {e}")
+            print(f"✗ Error en Ollama: {e}")
             # Retorno por defecto en caso de fallo de IA para no romper la app
             return {
                 "nombre": "Error IA",

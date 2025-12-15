@@ -71,3 +71,31 @@ api_router.include_router(
     tags=["Postulantes IA"], 
     prefix="/postulantes"
 )
+
+# 14. ALIAS EN ESPAÑOL para Documentos Legales (para compatibilidad con frontend)
+# Agregamos rutas directas para manejar ambos casos (con y sin trailing slash)
+from typing import List, Optional
+from fastapi import Query, Depends
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.services.document_service import DocumentService
+from app.schemas.schema_document import DocumentResponse
+
+@api_router.get("/documentos_legales", response_model=List[DocumentResponse], tags=["Documentos Legales"])
+@api_router.get("/documentos_legales/", response_model=List[DocumentResponse], tags=["Documentos Legales"])
+def read_documentos_legales(
+    employee_id: Optional[int] = Query(None, description="Filtra documentos por ID de empleado"),
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """
+    Obtiene la lista de documentos legales (licencias, permisos, etc.).
+    Es un alias en español de /documents.
+    """
+    service = DocumentService()
+    if employee_id is not None:
+        documents = service.get_documents_by_employee(db, employee_id=employee_id)
+    else:
+        documents = service.get_all_documents(db, skip=skip, limit=limit)
+    return documents

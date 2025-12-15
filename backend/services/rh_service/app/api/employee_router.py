@@ -121,30 +121,25 @@ def update_employee_route(
     Actualiza la información de un empleado.
     
     Lanza HTTPException 404 si el empleado no existe.
-    Lanza HTTPException 409 si el nuevo correo electrónico ya está en uso.
+    Lanza HTTPException 400 si el nuevo correo electrónico ya está en uso.
     """
     service = EmployeeService()
     
-    # 1. Verificar existencia
-    db_employee = service.get_employee_by_id(db, employee_id=employee_id)
-    if db_employee is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Empleado no encontrado"
-        )
-        
-    # 2. Intentar actualizar
+    # Intentar actualizar (la verificación de existencia se hace dentro del servicio)
     try:
         updated_employee = service.update_employee(
             db=db, 
-            db_employee=db_employee, 
+            employee_id=employee_id,
             employee_update=employee_in
         )
         return updated_employee
-    except IntegrityError:
+    except HTTPException:
+        # Re-lanzar las HTTPException del servicio
+        raise
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="El nuevo correo electrónico ya está registrado por otro usuario."
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error inesperado: {str(e)}"
         )
 
 @router.delete(

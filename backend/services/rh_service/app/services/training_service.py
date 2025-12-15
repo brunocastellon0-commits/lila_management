@@ -149,4 +149,4 @@ class TrainingService:
             Training.completado == False,
             Training.fecha_limite.isnot(None),
             Training.fecha_limite <= future_limit
-        ).order_by(Training.fecha_limite.asc()).all()
+        ).order_by(Training.fecha_limite.asc()).all() 

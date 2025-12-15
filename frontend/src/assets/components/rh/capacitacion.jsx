@@ -1,297 +1,479 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { 
-  GraduationCap, 
-  BookOpen, 
-  Award, 
-  Clock, 
-  Search, 
-  MoreVertical, 
-  PlayCircle, 
-  CheckCircle2, 
-  AlertCircle,
-  Calendar,
-  Users
+  GraduationCap, BookOpen, Award, Clock, Search, MoreVertical, 
+  PlayCircle, CheckCircle2, AlertCircle, Calendar, Users, X, Loader2,
+  UtensilsCrossed, ShieldCheck, HeartHandshake, Zap
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Card } from "../ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "../ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
+import { Label } from "../ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"; // Si tienes este componente, úsalo, si no, usaré HTML nativo estilizado
 
-// Datos Mock para el diseño
-const kpis = [
-  { label: "Cursos Activos", value: "12", icon: BookOpen, color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
-  { label: "Certificaciones", value: "85", icon: Award, color: "text-[#2A9D8F]", bg: "bg-[#2A9D8F]/10", border: "border-[#2A9D8F]/20" },
-  { label: "Horas Formación", value: "320h", icon: Clock, color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/20" },
-  { label: "Tasa Finalización", value: "94%", icon: GraduationCap, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-];
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:7000"; 
 
-const activeCourses = [
+// 🎨 PRESETS DE DISEÑO (Para que se vea bonito y no muerto)
+const COURSE_THEMES = [
   {
-    id: 1,
-    title: "Seguridad Alimentaria Básica",
-    category: "Cumplimiento",
-    progress: 75,
-    totalModules: 8,
-    completedModules: 6,
-    image: "https://images.unsplash.com/photo-1556910103-1c02745a30bf?auto=format&fit=crop&w=800&q=80",
-    dueDate: "15 Oct",
+    id: "seguridad",
+    label: "Seguridad & Higiene",
+    icon: ShieldCheck,
+    color: "text-rose-400",
+    image: "https://images.unsplash.com/photo-1581093458791-9f3c3900df4b?auto=format&fit=crop&w=800&q=80"
   },
   {
-    id: 2,
-    title: "Arte Latte & Barismo Avanzado",
-    category: "Habilidades",
-    progress: 30,
-    totalModules: 12,
-    completedModules: 4,
-    image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80",
-    dueDate: "20 Oct",
+    id: "cocina",
+    label: "Técnicas Culinarias",
+    icon: UtensilsCrossed,
+    color: "text-orange-400",
+    image: "https://images.unsplash.com/photo-1556910103-1c02745a30bf?auto=format&fit=crop&w=800&q=80"
   },
   {
-    id: 3,
-    title: "Atención al Cliente Premium",
-    category: "Servicio",
-    progress: 0,
-    totalModules: 5,
-    completedModules: 0,
-    image: "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=800&q=80",
-    dueDate: "30 Oct",
+    id: "servicio",
+    label: "Atención al Cliente",
+    icon: HeartHandshake,
+    color: "text-emerald-400",
+    image: "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: "barismo",
+    label: "Barismo & Café",
+    icon: Zap,
+    color: "text-amber-400",
+    image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: "general",
+    label: "Formación General",
+    icon: BookOpen,
+    color: "text-blue-400",
+    image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80"
   }
 ];
 
-const upcomingSessions = [
-  { id: 1, title: "Taller de Cata de Café", date: "12 Oct", time: "15:00", trainer: "Carlos M.", attendees: 8 },
-  { id: 2, title: "Protocolo de Seguridad", date: "14 Oct", time: "09:00", trainer: "Ana R.", attendees: 12 },
-];
-
-const certifications = [
-  { id: 1, employee: "Juan Pérez", role: "Barista", cert: "Manipulación de Alimentos", status: "valid", expiry: "Dic 2025" },
-  { id: 2, employee: "Maria Garcia", role: "Chef", cert: "Seguridad Industrial", status: "expiring", expiry: "Nov 2024" },
-  { id: 3, employee: "Carlos Ruiz", role: "Mesero", cert: "Atención al Cliente", status: "valid", expiry: "Ene 2026" },
-];
-
 export default function CapacitacionContent() {
-  const [activeTab, setActiveTab] = useState("mis-cursos"); // "mis-cursos" | "catalogo" | "gestion"
+  const [trainings, setTrainings] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingEmployees, setLoadingEmployees] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+
+  // Estados para el formulario
+  const [selectedTheme, setSelectedTheme] = useState(COURSE_THEMES[4]); // Default: General
+  const [selectedEmployee, setSelectedEmployee] = useState(null); // Empleado seleccionado
+  const [newTraining, setNewTraining] = useState({
+    employee_id: "",
+    nombre_capacitacion: "",
+    fecha_asignacion: new Date().toISOString().split('T')[0],
+    fecha_limite: "",
+  });
+
+  const fetchTrainings = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/rh/training`);
+      setTrainings(response.data);
+    } catch (error) {
+      console.error("Error al cargar capacitaciones:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/rh/employees`);
+      setEmployees(response.data);
+    } catch (error) {
+      console.error("Error al cargar empleados:", error);
+    } finally {
+      setLoadingEmployees(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTrainings();
+    fetchEmployees();
+  }, []);
+
+  const handleCreateTraining = async (e) => {
+    e.preventDefault();
+    
+    if (!selectedEmployee) {
+      alert("Por favor selecciona un empleado");
+      return;
+    }
+    
+    try {
+      // Inyectamos la URL de la imagen del tema seleccionado como "certificado_url" o un campo meta si tuvieramos
+      // Nota: Como tu backend espera 'certificado_url', podemos usar ese campo para guardar la imagen del curso por ahora
+      // O simplemente deducir la imagen en el frontend basado en el nombre, pero guardarla es más seguro.
+      
+      const payload = {
+        employee_id: selectedEmployee.id,
+        nombre_capacitacion: newTraining.nombre_capacitacion,
+        fecha_asignacion: newTraining.fecha_asignacion,
+        fecha_limite: newTraining.fecha_limite || null,
+        completado: false,
+        certificado_url: selectedTheme.id // Truco: Guardamos el ID del tema en este campo opcional para recuperar la foto luego
+      };
+
+      await axios.post(`${API_URL}/api/rh/training`, payload);
+      
+      setIsModalOpen(false);
+      setNewTraining({ ...newTraining, nombre_capacitacion: "", employee_id: "" });
+      setSelectedEmployee(null); // Reset empleado seleccionado
+      setSelectedTheme(COURSE_THEMES[4]); // Reset
+      fetchTrainings(); 
+    } catch (error) {
+      alert("Error al asignar el curso. Verifica los datos.");
+      console.error(error);
+    }
+  };
+
+  // Helper para recuperar el tema visual basado en lo guardado (o default)
+  const getTheme = (training) => {
+    // Si guardamos el ID del tema en certificado_url, lo buscamos
+    const found = COURSE_THEMES.find(t => t.id === training.certificado_url);
+    if (found) return found;
+    
+    // Fallback: Si no hay dato, asignamos aleatorio determinista por ID
+    return COURSE_THEMES[training.id % COURSE_THEMES.length];
+  };
+
+  const stats = {
+    total: trainings.length,
+    completados: trainings.filter(t => t.completado).length,
+    pendientes: trainings.filter(t => !t.completado).length,
+    tasa: trainings.length > 0 
+      ? Math.round((trainings.filter(t => t.completado).length / trainings.length) * 100) 
+      : 0
+  };
 
   return (
     <div className="p-8 bg-[#0c0e12] min-h-screen font-sans text-gray-200">
       
-      {/* Header Sección */}
+      {/* --- HEADER --- */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2 tracking-tight font-['Outfit']">
             Centro de Capacitación
           </h1>
           <p className="text-gray-400 font-light">
-            Desarrollo profesional y certificaciones del equipo
+            Planifica, asigna y monitorea el desarrollo de tu equipo.
           </p>
         </div>
         <div className="flex gap-3">
-          <Button className="bg-[#13161C] border border-white/10 text-gray-300 hover:text-white hover:bg-white/5">
-            <BookOpen className="w-4 h-4 mr-2" />
-            Catálogo
+          <Button onClick={fetchTrainings} className="bg-[#13161C] border border-white/10 text-gray-300 hover:text-white hover:bg-white/5">
+            <CheckCircle2 className="w-4 h-4 mr-2" />
+            Actualizar
           </Button>
-          <Button className="bg-gradient-to-r from-[#1B4F55] to-[#2A9D8F] text-white hover:from-[#2A9D8F] hover:to-[#1B4F55] border border-white/10 shadow-lg shadow-[#2A9D8F]/20">
-            <GraduationCap className="w-4 h-4 mr-2" />
-            Asignar Curso
-          </Button>
+
+          {/* --- MODAL DE CREACIÓN --- */}
+          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-to-r from-[#1B4F55] to-[#2A9D8F] text-white hover:from-[#2A9D8F] hover:to-[#1B4F55] border border-white/10 shadow-lg shadow-[#2A9D8F]/20">
+                <GraduationCap className="w-4 h-4 mr-2" />
+                Crear Nuevo Curso
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-[#13161C] border-white/10 text-white sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-['Outfit']">Asignar Capacitación</DialogTitle>
+              </DialogHeader>
+              
+              <form onSubmit={handleCreateTraining} className="space-y-5 mt-2">
+                
+                {/* Selector Visual de Tema */}
+                <div>
+                  <Label className="text-xs text-gray-400 mb-2 block uppercase tracking-wider">Categoría Visual</Label>
+                  <div className="grid grid-cols-5 gap-2">
+                    {COURSE_THEMES.map((theme) => (
+                      <button
+                        key={theme.id}
+                        type="button"
+                        onClick={() => setSelectedTheme(theme)}
+                        className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${
+                          selectedTheme.id === theme.id 
+                            ? "bg-[#2A9D8F]/20 border-[#2A9D8F] text-[#2A9D8F]" 
+                            : "bg-black/20 border-white/5 text-gray-500 hover:bg-white/5"
+                        }`}
+                        title={theme.label}
+                      >
+                        <theme.icon className="w-5 h-5 mb-1" />
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-[#2A9D8F] mt-2 text-center font-medium">{selectedTheme.label}</p>
+                </div>
+
+                <div className="space-y-4 bg-white/5 p-4 rounded-xl border border-white/5">
+                    <div className="space-y-2">
+                    <Label>Título del Curso</Label>
+                    <Input 
+                        className="bg-black/40 border-white/10 text-white focus:border-[#2A9D8F]"
+                        placeholder="Ej: Manipulación Higiénica de Alimentos"
+                        value={newTraining.nombre_capacitacion}
+                        onChange={(e) => setNewTraining({...newTraining, nombre_capacitacion: e.target.value})}
+                        required
+                    />
+                    </div>
+
+
+                    <div className="space-y-2">
+                      <Label>Empleado (Asignado a)</Label>
+                      <Select 
+                        value={selectedEmployee?.id?.toString() || ""} 
+                        onValueChange={(value) => {
+                          const emp = employees.find(e => e.id === parseInt(value));
+                          setSelectedEmployee(emp || null);
+                        }}
+                      >
+                        <SelectTrigger className="bg-black/40 border-white/10 text-white focus:border-[#2A9D8F]">
+                          <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-gray-500" />
+                            <SelectValue placeholder="Selecciona un empleado..." />
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#13161C] border-white/10 text-white max-h-64">
+                          {loadingEmployees ? (
+                            <div className="flex justify-center py-4">
+                              <Loader2 className="animate-spin text-[#2A9D8F] w-5 h-5" />
+                            </div>
+                          ) : employees.length === 0 ? (
+                            <div className="py-4 text-center text-gray-500 text-sm">
+                              No hay empleados disponibles
+                            </div>
+                          ) : (
+                            employees.map((emp) => (
+                              <SelectItem 
+                                key={emp.id} 
+                                value={emp.id.toString()}
+                                className="hover:bg-white/5 focus:bg-white/10 cursor-pointer"
+                              >
+                                <div className="flex items-center gap-3 py-1">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarFallback className="bg-gradient-to-br from-[#1B4F55] to-[#2A9D8F] text-white text-xs font-bold">
+                                      {emp.nombre[0]}{emp.apellido[0]}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <p className="font-medium text-sm">
+                                      {emp.nombre} {emp.apellido}
+                                    </p>
+                                    <p className="text-gray-400 text-xs">
+                                      {emp.puesto}
+                                    </p>
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                </div>
+
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Fecha Inicio</Label>
+                    <Input 
+                      type="date"
+                      className="bg-black/20 border-white/10 text-white"
+                      value={newTraining.fecha_asignacion}
+                      onChange={(e) => setNewTraining({...newTraining, fecha_asignacion: e.target.value})}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Fecha Límite (Opcional)</Label>
+                    <Input 
+                      type="date"
+                      className="bg-black/20 border-white/10 text-white"
+                      value={newTraining.fecha_limite}
+                      onChange={(e) => setNewTraining({...newTraining, fecha_limite: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 flex justify-end gap-3">
+                  <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)} className="hover:bg-white/5">Cancelar</Button>
+                  <Button type="submit" className="bg-[#2A9D8F] text-white hover:bg-[#2A9D8F]/80">Confirmar Asignación</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
-      {/* KPIs Grid */}
+      {/* --- KPIS --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {kpis.map((kpi, idx) => (
-          <div key={idx} className={`bg-[#13161C] p-6 rounded-[2rem] border border-white/10 shadow-lg relative overflow-hidden group`}>
-            <div className="flex justify-between items-start mb-4">
-              <div className={`p-3 rounded-2xl ${kpi.bg} ${kpi.border}`}>
-                <kpi.icon className={`w-6 h-6 ${kpi.color}`} />
-              </div>
-              <span className={`text-xs font-bold px-2 py-1 rounded-full bg-white/5 text-gray-400 border border-white/5`}>
-                Mensual
-              </span>
-            </div>
-            <p className="text-3xl font-bold text-white font-['Outfit'] mb-1">{kpi.value}</p>
-            <p className="text-sm text-gray-400 font-medium">{kpi.label}</p>
-            
-            {/* Decoración Hover */}
-            <div className={`absolute -bottom-4 -right-4 w-24 h-24 rounded-full ${kpi.bg} blur-2xl opacity-0 group-hover:opacity-50 transition-opacity duration-500`} />
-          </div>
-        ))}
+        <KPICard label="Total Asignados" value={stats.total} icon={BookOpen} color="text-blue-400" bg="bg-blue-500/10" border="border-blue-500/20" />
+        <KPICard label="Completados" value={stats.completados} icon={Award} color="text-[#2A9D8F]" bg="bg-[#2A9D8F]/10" border="border-[#2A9D8F]/20" />
+        <KPICard label="Pendientes" value={stats.pendientes} icon={Clock} color="text-purple-400" bg="bg-purple-500/10" border="border-purple-500/20" />
+        <KPICard label="Tasa Finalización" value={`${stats.tasa}%`} icon={GraduationCap} color="text-emerald-400" bg="bg-emerald-500/10" border="border-emerald-500/20" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* Columna Principal (Cursos) */}
-        <div className="lg:col-span-8 space-y-8">
+        {/* --- MAIN CONTENT (GRID DE CURSOS) --- */}
+        <div className="lg:col-span-8 space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white font-['Outfit']">Capacitaciones en Curso</h2>
+          </div>
           
-          {/* Sección: Mis Cursos Activos */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white font-['Outfit']">En Progreso</h2>
-              <button className="text-sm text-[#2A9D8F] hover:text-white transition-colors">Ver todo</button>
-            </div>
-            
-            <div className="space-y-4">
-              {activeCourses.map((course) => (
-                <div key={course.id} className="group bg-[#13161C] p-4 rounded-[1.5rem] border border-white/10 hover:border-[#2A9D8F]/30 hover:shadow-lg hover:shadow-[#2A9D8F]/10 transition-all duration-300 flex flex-col sm:flex-row gap-5">
-                  {/* Thumbnail del curso */}
-                  <div className="w-full sm:w-48 h-32 rounded-xl overflow-hidden relative shrink-0">
-                    <img src={course.image} alt={course.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" />
-                    <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
-                    <div className="absolute top-2 left-2">
-                       <Badge className="bg-black/60 backdrop-blur border border-white/10 text-white text-[10px]">
-                         {course.category}
-                       </Badge>
-                    </div>
-                  </div>
+          {loading ? (
+            <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#2A9D8F] w-8 h-8" /></div>
+          ) : trainings.length === 0 ? (
+             <div className="flex flex-col items-center justify-center py-16 text-gray-500 border-2 border-dashed border-white/5 rounded-[2rem] bg-white/[0.02]">
+               <BookOpen className="w-12 h-12 mb-4 opacity-20" />
+               <p className="text-lg font-medium">No hay capacitaciones activas</p>
+               <p className="text-sm opacity-60">Asigna un nuevo curso para comenzar.</p>
+             </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {trainings.map((course) => {
+                const theme = getTheme(course);
+                const Icon = theme.icon;
+                const progress = course.completado ? 100 : 0; // Simple lógica: 0 o 100 por ahora
 
-                  {/* Info del curso */}
-                  <div className="flex-1 flex flex-col justify-between py-1">
-                    <div>
-                      <div className="flex justify-between items-start">
-                        <h3 className="text-lg font-bold text-white group-hover:text-[#2A9D8F] transition-colors mb-1">{course.title}</h3>
-                        <button className="text-gray-500 hover:text-white"><MoreVertical className="w-5 h-5" /></button>
+                return (
+                  <div key={course.id} className="group bg-[#13161C] p-4 rounded-[1.5rem] border border-white/10 hover:border-[#2A9D8F]/30 hover:shadow-lg hover:shadow-[#2A9D8F]/10 transition-all duration-300 flex flex-col sm:flex-row gap-5 relative overflow-hidden">
+                    
+                    {/* Barra lateral de estado colorida */}
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${course.completado ? 'bg-[#2A9D8F]' : 'bg-amber-500'}`} />
+
+                    {/* IMAGEN DEL CURSO */}
+                    <div className="w-full sm:w-40 h-32 rounded-xl overflow-hidden relative shrink-0 shadow-lg">
+                      <img src={theme.image} alt="Cover" className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-500" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                      <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white text-xs font-medium">
+                        <Icon className={`w-3 h-3 ${theme.color}`} />
+                        <span>{theme.label}</span>
                       </div>
-                      <p className="text-sm text-gray-400 mb-4 flex items-center gap-2">
-                        <Clock className="w-4 h-4" /> Vence: {course.dueDate}
-                      </p>
                     </div>
 
-                    <div>
-                      <div className="flex justify-between text-xs mb-2 font-medium">
-                        <span className="text-gray-300">{course.completedModules}/{course.totalModules} Módulos</span>
-                        <span className="text-[#2A9D8F]">{course.progress}%</span>
+                    {/* INFO PRINCIPAL */}
+                    <div className="flex-1 flex flex-col justify-between py-1 z-10">
+                      <div>
+                        <div className="flex justify-between items-start mb-1">
+                          <h3 className="text-lg font-bold text-white group-hover:text-[#2A9D8F] transition-colors line-clamp-1">
+                            {course.nombre_capacitacion}
+                          </h3>
+                          {course.completado && <CheckCircle2 className="w-5 h-5 text-[#2A9D8F]" />}
+                        </div>
+                        
+                        <div className="flex items-center gap-4 text-sm text-gray-400 mb-3">
+                            <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded-md">
+                                <Users className="w-3.5 h-3.5" />
+                                <span>
+                                  {(() => {
+                                    const employee = employees.find(emp => emp.id === course.employee_id);
+                                    return employee 
+                                      ? <span className="text-gray-200 font-medium">{employee.nombre} {employee.apellido}</span>
+                                      : <span className="text-gray-200 font-mono">ID: {course.employee_id}</span>;
+                                  })()}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>{course.fecha_limite ? `Vence: ${course.fecha_limite}` : 'Sin límite'}</span>
+                            </div>
+                        </div>
                       </div>
-                      {/* Barra de Progreso Custom */}
-                      <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-[#1B4F55] to-[#2A9D8F] rounded-full transition-all duration-500 relative"
-                          style={{ width: `${course.progress}%` }}
-                        >
-                           <div className="absolute right-0 top-0 bottom-0 w-2 bg-white/30 blur-[2px]" />
+
+                      {/* ESTADO Y BARRA DE PROGRESO */}
+                      <div>
+                        <div className="flex justify-between text-xs mb-2 font-medium">
+                          <span className={course.completado ? "text-[#2A9D8F]" : "text-amber-500"}>
+                             {course.completado ? "Certificado Emitido" : "Pendiente de Finalización"}
+                          </span>
+                          <span className="text-white/60">{progress}%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-1000 relative ${course.completado ? 'bg-[#2A9D8F]' : 'bg-amber-500'}`}
+                            style={{ width: `${progress}%` }}
+                          />
                         </div>
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Botón de Acción */}
-                  <div className="flex items-center sm:self-center">
-                     <Button size="icon" className="rounded-full w-12 h-12 bg-white/5 border border-white/10 text-white hover:bg-[#2A9D8F] hover:border-[#2A9D8F] transition-all group/btn">
-                        <PlayCircle className="w-6 h-6 group-hover/btn:scale-110 transition-transform" />
-                     </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-          </div>
-
-          {/* Sección: Certificaciones de Equipo */}
-          <div className="bg-[#13161C] rounded-[2rem] border border-white/10 overflow-hidden shadow-lg shadow-black/20">
-            <div className="p-6 border-b border-white/10 flex justify-between items-center">
-               <h2 className="text-lg font-bold text-white font-['Outfit']">Certificaciones del Equipo</h2>
-               <div className="relative">
-                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                 <Input className="pl-9 h-9 w-64 bg-[#0c0e12] border-white/10 text-sm" placeholder="Buscar empleado..." />
-               </div>
-            </div>
-            <Table>
-              <TableHeader className="bg-[#0c0e12]/50">
-                <TableRow className="border-b border-white/5 hover:bg-transparent">
-                  <TableHead className="text-gray-400 font-bold">Empleado</TableHead>
-                  <TableHead className="text-gray-400 font-bold">Certificación</TableHead>
-                  <TableHead className="text-gray-400 font-bold">Estado</TableHead>
-                  <TableHead className="text-gray-400 font-bold text-right">Vencimiento</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {certifications.map((cert) => (
-                  <TableRow key={cert.id} className="border-b border-white/5 hover:bg-white/5">
-                    <TableCell className="font-medium text-white">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="w-8 h-8 border border-white/10">
-                          <AvatarFallback className="bg-[#1B4F55] text-[#2A9D8F] text-xs">{cert.employee.substring(0,2)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-sm font-bold">{cert.employee}</p>
-                          <p className="text-xs text-gray-500">{cert.role}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-gray-300">{cert.cert}</TableCell>
-                    <TableCell>
-                      {cert.status === 'valid' ? (
-                        <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20">Vigente</Badge>
-                      ) : (
-                        <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20">Por Vencer</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right text-gray-400 font-mono text-xs">{cert.expiry}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
+          )}
         </div>
 
-        {/* Columna Lateral (Agenda y Accesos) */}
+        {/* --- SIDEBAR (HISTORIAL COMPACTO) --- */}
         <div className="lg:col-span-4 space-y-8">
-          
-          {/* Próximas Sesiones */}
-          <Card className="border-0 bg-transparent shadow-none p-0">
-             <div className="flex items-center justify-between mb-4 px-1">
-                <h3 className="text-lg font-bold text-white font-['Outfit']">Agenda Semanal</h3>
-                <Calendar className="w-5 h-5 text-[#2A9D8F]" />
-             </div>
-             <div className="space-y-3">
-                {upcomingSessions.map((session) => (
-                  <div key={session.id} className="bg-[#13161C] p-4 rounded-2xl border border-white/10 relative overflow-hidden group hover:border-[#2A9D8F]/30 transition-all">
-                     <div className="absolute top-0 left-0 w-1 h-full bg-[#2A9D8F]" />
-                     <div className="flex justify-between items-start mb-2">
-                        <span className="text-xs font-bold text-[#2A9D8F] bg-[#2A9D8F]/10 px-2 py-1 rounded-md border border-[#2A9D8F]/20">
-                           {session.date} • {session.time}
-                        </span>
-                        <div className="flex -space-x-2">
-                           {[1,2,3].map(i => (
-                             <div key={i} className="w-6 h-6 rounded-full bg-gray-700 border-2 border-[#13161C]" />
-                           ))}
-                        </div>
-                     </div>
-                     <h4 className="font-bold text-white group-hover:text-[#2A9D8F] transition-colors">{session.title}</h4>
-                     <p className="text-xs text-gray-500 mt-1">Instructor: {session.trainer}</p>
-                  </div>
-                ))}
-                
-                <Button variant="outline" className="w-full border-dashed border-white/20 text-gray-400 hover:text-white hover:border-white/40 hover:bg-white/5 py-6 rounded-2xl">
-                   <Users className="w-4 h-4 mr-2" /> Agendar Nueva Sesión
-                </Button>
-             </div>
-          </Card>
+            <div className="bg-[#13161C] rounded-[2rem] border border-white/10 overflow-hidden shadow-lg shadow-black/20">
+              <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/[0.02]">
+                <h2 className="text-lg font-bold text-white font-['Outfit']">Últimos Movimientos</h2>
+              </div>
+              <Table>
+                <TableBody>
+                  {trainings.slice(0, 6).map((t) => (
+                    <TableRow key={t.id} className="border-b border-white/5 hover:bg-white/5 group">
+                      <TableCell className="font-medium text-white py-4">
+                          <div className="flex flex-col">
+                              <span className="text-sm group-hover:text-[#2A9D8F] transition-colors">{t.nombre_capacitacion}</span>
+                              <span className="text-xs text-gray-500">Asignado el {t.fecha_asignacion}</span>
+                          </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className={`w-2 h-2 rounded-full ml-auto ${t.completado ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500'}`} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {trainings.length === 0 && (
+                      <TableRow>
+                          <TableCell colSpan={2} className="text-center text-gray-500 py-8 text-xs">Sin actividad reciente</TableCell>
+                      </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
 
-          {/* Accesos Rápidos */}
-          <div className="bg-gradient-to-br from-[#1B4F55] to-[#2A9D8F] rounded-[2rem] p-6 text-white shadow-lg shadow-[#2A9D8F]/20 relative overflow-hidden">
-             <div className="relative z-10">
+            {/* Banner Decorativo */}
+            <div className="bg-gradient-to-br from-[#1B4F55] to-[#2A9D8F] rounded-[2rem] p-6 text-white shadow-lg shadow-[#2A9D8F]/20 relative overflow-hidden group">
+              <div className="relative z-10">
                 <h3 className="text-xl font-bold font-['Outfit'] mb-2">Biblioteca Digital</h3>
-                <p className="text-teal-100 text-sm mb-6 opacity-90">Accede a manuales, recetas y videos de entrenamiento.</p>
-                <Button className="w-full bg-white text-[#1B4F55] hover:bg-teal-50 font-bold border-0 shadow-lg">
-                   Explorar Recursos
+                <p className="text-teal-100 text-sm mb-6 opacity-90 pr-8">
+                    Accede a manuales de procedimiento y guías PDF para tus cursos.
+                </p>
+                <Button className="w-full bg-white text-[#1B4F55] hover:bg-teal-50 font-bold border-0 shadow-lg translate-y-0 group-hover:-translate-y-1 transition-transform">
+                    Explorar Recursos
                 </Button>
-             </div>
-             {/* Decoración fondo */}
-             <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-white/20 rounded-full blur-2xl pointer-events-none" />
-             <BookOpen className="absolute bottom-4 right-4 w-16 h-16 text-white/20 rotate-[-15deg]" />
+              </div>
+              <BookOpen className="absolute bottom-4 right-4 w-20 h-20 text-white/10 rotate-[-15deg] group-hover:scale-110 transition-transform duration-500" />
           </div>
-
         </div>
       </div>
+    </div>
+  );
+}
+
+// Componente pequeño de KPI
+function KPICard({ label, value, icon: Icon, color, bg, border }) {
+  return (
+    <div className={`bg-[#13161C] p-6 rounded-[2rem] border border-white/10 shadow-lg relative overflow-hidden group hover:border-white/20 transition-colors`}>
+      <div className="flex justify-between items-start mb-4">
+        <div className={`p-3 rounded-2xl ${bg} ${border}`}>
+          <Icon className={`w-6 h-6 ${color}`} />
+        </div>
+      </div>
+      <p className="text-3xl font-bold text-white font-['Outfit'] mb-1">{value}</p>
+      <p className="text-sm text-gray-400 font-medium">{label}</p>
+      <div className={`absolute -bottom-4 -right-4 w-24 h-24 rounded-full ${bg} blur-2xl opacity-0 group-hover:opacity-50 transition-opacity duration-500`} />
     </div>
   );
 }

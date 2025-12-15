@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session,joinedload
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 from typing import List
+import httpx
+import os
 
 # Importa el modelo ORM (tabla) y los schemas Pydantic
 from app.models.employee import Employee
@@ -82,6 +84,18 @@ class EmployeeService:
         # Convierte el schema de Pydantic a un diccionario, excluyendo campos no establecidos
         update_data = employee_update.model_dump(exclude_unset=True)
         
+        # Si se está actualizando el email, verificar que no esté en uso por otro empleado
+        if 'email' in update_data and update_data['email'] != db_employee.email:
+            existing_employee = db.query(Employee).filter(
+                Employee.email == update_data['email'],
+                Employee.id != employee_id
+            ).first()
+            if existing_employee:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="El correo electrónico ya está en uso por otro empleado."
+                )
+        
         # Copia los datos actualizados al objeto ORM
         for key, value in update_data.items():
             setattr(db_employee, key, value)
@@ -91,14 +105,18 @@ class EmployeeService:
             db.commit()
             db.refresh(db_employee)
             return db_employee
-        except IntegrityError:
+        except IntegrityError as e:
             db.rollback()
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
-                                detail="El correo electrónico actualizado ya está en uso.")
-        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail=f"Error de integridad: {str(e)}"
+            )
+        except Exception as e:
             db.rollback()
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-                                detail="Error desconocido al actualizar empleado.")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                detail=f"Error al actualizar empleado: {str(e)}"
+            )
 
 
     def delete_employee(self, db: Session, employee_id: int) -> dict:
@@ -107,17 +125,25 @@ class EmployeeService:
         """
         db_employee = self.get_employee_by_id(db, employee_id)
         
-        db.delete(db_employee)
-        db.commit()
-        return {"message": f"Empleado con ID {employee_id} eliminado exitosamente."}
+        try:
+            db.delete(db_employee)
+            db.commit()
+            return {"message": f"Empleado con ID {employee_id} eliminado exitosamente."}
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error al eliminar empleado: {str(e)}"
+            )
 
 
 
     def create_employee_with_user(self, db: Session, employee_data: EmployeeWithUserCreate) -> Employee:
             """
             1. Separa los datos (Usuario vs Empleado).
-            2. Guarda el Empleado en la BD local.
-            3. (Opcional) Aquí podrías llamar al User Service para crear el usuario.
+            2. Crea el usuario en el User Service mediante HTTP.
+            3. Si el usuario se crea exitosamente, crea el Empleado en la BD local.
+            4. Si algo falla, rollback apropiado.
             """
             # 1. Convertimos a diccionario
             full_data = employee_data.model_dump()
@@ -128,7 +154,58 @@ class EmployeeService:
             
             # full_data ahora solo tiene: nombre, apellido, email, sucursal_id, etc.
 
-            # 3. Creamos la instancia del modelo Employee
+            # 3. URL del User Service (desde variable de entorno o default)
+            user_service_url = os.getenv("USER_SERVICE_URL", "http://localhost:8000")
+            
+            # 4. Preparar payload para crear usuario
+            user_payload = {
+                "username": username,
+                "password": password,
+                "email": full_data.get("email"),  # Usamos el mismo email del empleado
+                "role": "employee",  # Por defecto es empleado
+                "is_active": True
+            }
+
+            # 5. Intentar crear el usuario en el User Service
+            try:
+                with httpx.Client(timeout=10.0) as client:
+                    user_response = client.post(
+                        f"{user_service_url}/users/register",
+                        json=user_payload
+                    )
+                    
+                    # Si el servicio de usuarios devuelve un error
+                    if user_response.status_code != 200:
+                        error_detail = user_response.json().get("detail", "Error desconocido")
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Error al crear usuario: {error_detail}"
+                        )
+                    
+                    user_data = user_response.json()
+                    print(f"✅ Usuario creado exitosamente: {user_data.get('username')} (ID: {user_data.get('id')})")
+                    
+            except httpx.ConnectError:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="No se pudo conectar con el servicio de usuarios. Asegúrate de que esté ejecutándose."
+                )
+            except httpx.TimeoutException:
+                raise HTTPException(
+                    status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                    detail="Tiempo de espera agotado al conectar con el servicio de usuarios."
+                )
+            except HTTPException:
+                # Re-lanzar las HTTPException que ya hemos definido
+                raise
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Error inesperado al crear usuario: {str(e)}"
+                )
+
+            # 6. Si llegamos aquí, el usuario fue creado exitosamente
+            # Ahora creamos el empleado
             db_employee = Employee(**full_data)
 
             try:
@@ -136,23 +213,22 @@ class EmployeeService:
                 db.commit()
                 db.refresh(db_employee)
                 
-                # --- IMPORTANTE ---
-                # Aquí ya tienes el empleado creado (db_employee.id).
-                # En un futuro, aquí agregarás la llamada HTTP a tu User Service 
-                # enviando el username, password y el db_employee.id.
-                print(f"DEBUG: Empleado creado ID {db_employee.id}. Usuario '{username}' pendiente de registro en Auth Service.")
+                print(f"✅ Empleado creado exitosamente: {db_employee.nombre} {db_employee.apellido} (ID: {db_employee.id})")
+                print(f"🔗 Usuario asociado: {username}")
                 
                 return db_employee
 
             except IntegrityError:
                 db.rollback()
+                # Si falla la creación del empleado, idealmente deberíamos eliminar el usuario creado
+                # Esto se puede mejorar en el futuro con una transacción distribuida
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST, 
-                    detail="El correo electrónico ya está registrado."
+                    detail="El correo electrónico ya está registrado como empleado."
                 )
             except Exception as e:
                 db.rollback()
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-                    detail=f"Error al crear empleado con usuario: {str(e)}"
+                    detail=f"Error al crear empleado: {str(e)}"
                 )

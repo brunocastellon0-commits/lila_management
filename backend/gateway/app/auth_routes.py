@@ -35,3 +35,12 @@ async def get_current_user_via_gateway(request: Request):
         f"{settings.user_service_url}/auth/me",  # → http://localhost:8000/auth/me
         headers=dict(request.headers.items()),
     )
+
+@auth_router.get("/auth/verify")
+async def verify_token_via_gateway(request: Request):
+    """Verifica si el token JWT es válido."""
+    return await forward_request(
+        "GET",
+        f"{settings.user_service_url}/auth/verify",  # → http://localhost:8000/auth/verify
+        headers=dict(request.headers.items()),
+    )

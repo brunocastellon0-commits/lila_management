@@ -9,14 +9,14 @@ from app.database import get_db
 from app.services.postulante_service import PostulanteService
 from app.schemas.schema_postulante import PostulanteResponse, PostulanteUpdate
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=False)
 
 # --- Esquema simple para el Chat (Request Body) ---
 class ChatRequest(BaseModel):
     pregunta: str
 
 # 1. Endpoint para POSTULAR (Subir CV)
-@router.post("/", response_model=PostulanteResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=PostulanteResponse, status_code=status.HTTP_201_CREATED)
 async def crear_postulacion(
     file: UploadFile = File(...), 
     telefono: str = Form(...), 
@@ -36,7 +36,7 @@ async def crear_postulacion(
     return await service.crear_postulante_desde_cv(file, telefono, correo)
 
 # 2. Endpoint para LISTAR Postulantes
-@router.get("/", response_model=List[PostulanteResponse])
+@router.get("", response_model=List[PostulanteResponse])
 def listar_postulantes(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     service = PostulanteService(db)
     return service.obtener_postulantes(skip, limit)
@@ -64,7 +64,7 @@ def actualizar_postulante(
     return postulante
 
 # 5. Endpoint para el CHATBOT DE RRHH (RAG)
-@router.post("/chat-rrhh/")
+@router.post("/chat-rrhh")
 def chat_rrhh(request: ChatRequest, db: Session = Depends(get_db)):
     """
     Interactúa con la IA inyectando el contexto de los candidatos actuales.

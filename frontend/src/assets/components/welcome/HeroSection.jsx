@@ -6,8 +6,8 @@ import { useNavigate } from "react-router-dom";
 
 const backgroundImages = [
   "https://images.unsplash.com/photo-1497935586351-b67a49e012bf?q=80&w=1920&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=1920&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1920&auto=format&fit=crop"
+  "https://scontent.cdninstagram.com/v/t51.75761-15/476314356_18053788043487990_7431928703067722220_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=108&ig_cache_key=MzU2MDcyODQzMjk1ODk3MzM1OQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjE0NDB4MTgwMC5zZHIuQzMifQ%3D%3D&_nc_ohc=Uo0wzUmR5O8Q7kNvwEFY-Cy&_nc_oc=AdnjMkU13RaeGM533IGIm2opOvL53798bglYpwRtKIP0zudV42HBdalS8NmEWcD0NGw&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent.cdninstagram.com&_nc_gid=eORfIbt1HTLqgyhAkfCECg&oh=00_AfkjoSFwISl3Dlh0IoW_SKbXfwDZC3qU9cUya4_onuhUGg&oe=694221A5",
+  "https://scontent.cdninstagram.com/v/t51.75761-15/474640407_18052422794487990_9186530544464049180_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=104&ig_cache_key=MzU1MTI0NjQ4MTgyODI1NDM5Mw%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjE0NDB4MTc5OS5zZHIuQzMifQ%3D%3D&_nc_ohc=zOnDiOHw88QQ7kNvwGNVcOO&_nc_oc=AdkjmV2Z_-2BHFemJJbSUfEjh1jgEbjB_j8_Uke1WV50uXjFVc0Bb_eVc727ZyGHn_k&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent.cdninstagram.com&_nc_gid=eORfIbt1HTLqgyhAkfCECg&oh=00_AflOmw9s6w5AwAzZzvCpUk0U2H0yjl_vJKRoL_Ry1GqOaA&oe=69421399"
 ];
 
 export function HeroSection() {

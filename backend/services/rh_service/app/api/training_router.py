@@ -11,15 +11,15 @@ from app.services.training_service import TrainingService
 from app.schemas.schema_training import TrainingCreate, TrainingUpdate, TrainingResponse 
 
 # Inicialización del router
-router = APIRouter()
+router = APIRouter(redirect_slashes=False)
 service = TrainingService()
 
 # ----------------------------------------------------------------------
 # ENDPOINTS CRUD
 # ----------------------------------------------------------------------
 
-@router.post(
-    "/", 
+@router.post( 
+    "", 
     response_model=TrainingResponse, 
     status_code=status.HTTP_201_CREATED,
     summary="Crea un nuevo registro de capacitación asignada"
@@ -37,7 +37,7 @@ def create_training_route(
 
 
 @router.get(
-    "/", 
+    "", 
     response_model=List[TrainingResponse],
     summary="Lista todas las capacitaciones o filtra por empleado"
 )

@@ -53,13 +53,20 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
 
   const validateForm = () => {
     const newErrors = {};
-    const requiredFields = ["nombre", "apellido", "email", "puesto", "rol_id", "sucursal_id", "fecha_ingreso", "password"]; // ← Agregar password
     
-    requiredFields.forEach((key) => {
+    // Campos base requeridos
+    const baseRequiredFields = ["nombre", "apellido", "email", "rol_id", "sucursal_id", "fecha_ingreso", "password"];
+    
+    baseRequiredFields.forEach((key) => {
       if (!formData[key]) {
         newErrors[key] = "Campo obligatorio";
       }
     });
+
+    // ✅ NUEVO: Puesto solo es requerido si el rol es "Empleado" (rol_id === "1")
+    if (formData.rol_id === "1" && !formData.puesto) {
+      newErrors.puesto = "Seleccione el área de trabajo del empleado";
+    }
 
     // Validar email
     if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
@@ -103,22 +110,23 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
 
     setSubmitLoading(true);
     try {
-      // Función para mapear rol_id a role
+      // Función para mapear rol_id a role para el User Service
       const getRoleFromRolId = (rol_id) => {
         const roleMap = {
-          "1": "employee",    // Mesero
-          "2": "admin",       // Administrador
-          "3": "manager",     // Gerente
-          "4": "supervisor"   // Supervisor
+          "1": "employee",    // Empleado
+          "2": "admin"        // Administrador
         };
         return roleMap[rol_id] || "employee";
       };
+
+      // ✅ Si es Administrador (rol_id === "2"), usar "Administrador" como puesto
+      const puestoFinal = formData.rol_id === "2" ? "Administrador" : formData.puesto;
 
       const payload = {
         nombre: formData.nombre,
         apellido: formData.apellido,
         email: formData.email,
-        puesto: formData.puesto,
+        puesto: puestoFinal,  // ✅ Enviar "Administrador" si es admin, o el área seleccionada si es empleado
         rol_id: parseInt(formData.rol_id),
         sucursal_id: parseInt(formData.sucursal_id),
         fecha_ingreso: formData.fecha_ingreso,
@@ -330,37 +338,12 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
             </div>
           </div>
 
-          {/* Grid para puesto y rol */}
+          {/* Grid para rol y puesto (condicional) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Puesto */}
+            {/* Rol - Define permisos del sistema */}
             <div>
               <label className={labelClass}>
-                Puesto <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="puesto"
-                value={formData.puesto}
-                onChange={handleChange}
-                className={`${inputClass} ${errors.puesto ? errorClass : ""}`}
-                placeholder="Ej: Mesero, Cocinero"
-                maxLength={50}
-                disabled={submitLoading}
-              />
-              {errors.puesto && (
-                <span className="text-rose-400 text-xs mt-1.5 block font-semibold flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                  {errors.puesto}
-                </span>
-              )}
-            </div>
-
-            {/* Rol */}
-            <div>
-              <label className={labelClass}>
-                Rol <span className="text-rose-500">*</span>
+                Rol del Sistema <span className="text-rose-500">*</span>
               </label>
               <select
                 name="rol_id"
@@ -369,11 +352,9 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
                 className={`${inputClass} ${errors.rol_id ? errorClass : ""}`}
                 disabled={submitLoading}
               >
-                <option value="">Seleccione un rol</option>
-                <option value="1">Mesero</option>
+                <option value="">Seleccione el rol</option>
+                <option value="1">Empleado</option>
                 <option value="2">Administrador</option>
-                <option value="3">Gerente</option>
-                <option value="4">Supervisor</option>
               </select>
               {errors.rol_id && (
                 <span className="text-rose-400 text-xs mt-1.5 block font-semibold flex items-center gap-1">
@@ -383,7 +364,58 @@ export function RegistrarEmpleadoForm({ onSuccess, onCancel, employee }) {
                   {errors.rol_id}
                 </span>
               )}
+              <p className="text-xs text-gray-500 mt-1.5 font-medium">
+                {formData.rol_id === "2" ? "✓ Acceso completo al sistema" : "Acceso limitado según área"}
+              </p>
             </div>
+
+            {/* Puesto - Solo si es Empleado (rol_id === "1") */}
+            {formData.rol_id === "1" && (
+              <div>
+                <label className={labelClass}>
+                  Área de Trabajo <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  name="puesto"
+                  value={formData.puesto}
+                  onChange={handleChange}
+                  className={`${inputClass} ${errors.puesto ? errorClass : ""}`}
+                  disabled={submitLoading}
+                >
+                  <option value="">Seleccione el área</option>
+                  <option value="Mesero">Mesero</option>
+                  <option value="Barista">Barista</option>
+                  <option value="Chef">Chef</option>
+                  <option value="Ayudante de Cocina">Ayudante de Cocina</option>
+                  <option value="Cajero">Cajero</option>
+                  <option value="Producción">Producción</option>
+                  <option value="Limpieza">Limpieza</option>
+                  <option value="Seguridad">Seguridad</option>
+                </select>
+                {errors.puesto && (
+                  <span className="text-rose-400 text-xs mt-1.5 block font-semibold flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {errors.puesto}
+                  </span>
+                )}
+                <p className="text-xs text-gray-500 mt-1.5 font-medium">Define el área específica de trabajo</p>
+              </div>
+            )}
+
+            {/* Mensaje informativo si es Administrador */}
+            {formData.rol_id === "2" && (
+              <div className="bg-[#2A9D8F]/10 border border-[#2A9D8F]/20 rounded-xl p-4 flex items-start gap-3">
+                <svg className="w-5 h-5 text-[#2A9D8F] mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <div>
+                  <p className="text-sm font-bold text-[#2A9D8F]">Rol Administrativo</p>
+                  <p className="text-xs text-gray-400 mt-1">Los administradores tienen acceso completo al sistema y no requieren área específica.</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sucursal */}

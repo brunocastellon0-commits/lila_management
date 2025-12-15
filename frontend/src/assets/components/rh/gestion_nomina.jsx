@@ -46,7 +46,7 @@ import {
 } from "lucide-react";
 import { Toaster } from "../ui/sonner";
 import employeeService from "../../../api/employee_Service";
-import { canAccessRH, canManageEmployees, ROLES } from '../../../utils/roles';
+// Permisos manejados en el backend
 
 export default function GestionNominaContent() {
   const [employees, setEmployees] = useState([]);
@@ -65,38 +65,10 @@ export default function GestionNominaContent() {
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [selectedEmployeeForSchedule, setSelectedEmployeeForSchedule] = useState(null);
 
-  // 🔐 NUEVO: Estado para permisos del usuario
-  const [userRole, setUserRole] = useState(null);
-  const [userPermissions, setUserPermissions] = useState({});
-
-  // Cargar empleados y permisos del usuario
+  // Cargar empleados
   useEffect(() => {
-    loadUserPermissions();
     loadEmployees();
   }, [refreshTrigger]);
-
-  const loadUserPermissions = () => {
-    try {
-      // ✅ NUEVO: Busca directamente en localStorage
-      const userRole = localStorage.getItem('role') || localStorage.getItem('userRole');
-      const roleId = userRole === 'admin' ? ROLES.ADMINISTRADOR : ROLES.MESERO;
-      
-      console.log('🔍 Debug GestionNomina - Role detectado:', userRole, 'Role ID:', roleId);
-      
-      setUserRole(roleId);
-      setUserPermissions({
-        canAccessRH: canAccessRH(roleId),
-        canManageEmployees: canManageEmployees(roleId)
-      });
-    } catch (error) {
-      console.error("Error cargando permisos:", error);
-      setUserRole(ROLES.MESERO);
-      setUserPermissions({
-        canAccessRH: false,
-        canManageEmployees: false
-      });
-    }
-  };
 
   const loadEmployees = async () => {
     setLoading(true);
@@ -136,19 +108,11 @@ export default function GestionNominaContent() {
   const uniqueSucursales = [...new Set(employees.map(emp => emp.sucursal?.nombre_sucursal).filter(Boolean))];
 
   const handleNewEmployee = () => {
-    if (!userPermissions.canManageEmployees) {
-      toast.error("No tienes permisos para crear empleados");
-      return;
-    }
     setSelectedEmployee(null);
     setIsModalOpen(true);
   };
 
   const handleEditEmployee = (employee) => {
-    if (!userPermissions.canManageEmployees) {
-      toast.error("No tienes permisos para editar empleados");
-      return;
-    }
     setSelectedEmployee(employee);
     setIsModalOpen(true);
   };
@@ -178,10 +142,6 @@ export default function GestionNominaContent() {
   };
 
   const handleDeleteClick = (employee) => {
-    if (!userPermissions.canManageEmployees) {
-      toast.error("No tienes permisos para eliminar empleados");
-      return;
-    }
     setEmployeeToDelete(employee);
     setDeleteDialogOpen(true);
   };
@@ -207,28 +167,7 @@ export default function GestionNominaContent() {
     toast.info(`Ver detalles de ${employee.nombre} ${employee.apellido}`);
   };
 
-  if (!userPermissions.canAccessRH) {
-    return (
-      <div className="p-8 flex items-center justify-center min-h-screen bg-[#0c0e12]">
-        <div className="text-center max-w-md">
-          <div className="bg-[#13161C] rounded-[2rem] border border-red-900/50 p-8 shadow-2xl">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-900/20 mb-6 border border-red-500/20">
-              <ShieldAlert className="w-10 h-10 text-red-500" />
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-3 font-['Outfit']">Acceso Restringido</h2>
-            <p className="text-gray-400 mb-4 font-light">
-              No tienes permisos para acceder al módulo de Recursos Humanos.
-            </p>
-            <div className="bg-[#0c0e12] rounded-xl p-4 border border-white/5">
-              <p className="text-sm text-gray-500 font-medium">
-                Si necesitas acceso, contacta al administrador del sistema.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Seguridad manejada en el backend
 
   return (
     <div className="p-8 bg-[#0c0e12] min-h-screen text-gray-200 font-sans">
@@ -243,40 +182,15 @@ export default function GestionNominaContent() {
             <p className="text-gray-400 font-light">
               Administra la información del personal de tu restaurante
             </p>
-            <div className="flex items-center gap-2 mt-3">
-              <Badge 
-                variant="outline" 
-                className={`border font-semibold ${
-                  userRole === ROLES.ADMINISTRADOR 
-                    ? "border-[#2A9D8F]/30 bg-[#2A9D8F]/10 text-[#2A9D8F]" 
-                    : "border-gray-700 bg-gray-800 text-gray-400"
-                }`}
-              >
-                {userRole === ROLES.ADMINISTRADOR ? "Administrador" : "Mesero"}
-              </Badge>
-              {userRole === ROLES.ADMINISTRADOR && (
-                <span className="text-xs text-[#2A9D8F] font-medium">✓ Acceso completo</span>
-              )}
-            </div>
           </div>
           
-          {userPermissions.canManageEmployees ? (
-            <Button 
-              onClick={handleNewEmployee} 
-              className="bg-gradient-to-r from-[#1B4F55] to-[#2A9D8F] hover:from-[#2A9D8F] hover:to-[#1B4F55] text-white shadow-lg shadow-[#2A9D8F]/20 hover:shadow-[#2A9D8F]/40 transition-all duration-300 font-bold px-6 py-6 rounded-xl border border-white/10"
-            >
-              <Plus className="w-5 h-5 mr-2" /> 
-              Nuevo Empleado
-            </Button>
-          ) : (
-            <Button 
-              disabled
-              className="bg-[#13161C] text-gray-500 cursor-not-allowed font-semibold px-6 py-6 rounded-xl border border-white/10"
-            >
-              <Plus className="w-5 h-5 mr-2" /> 
-              Nuevo Empleado
-            </Button>
-          )}
+          <Button 
+            onClick={handleNewEmployee} 
+            className="bg-gradient-to-r from-[#1B4F55] to-[#2A9D8F] hover:from-[#2A9D8F] hover:to-[#1B4F55] text-white shadow-lg shadow-[#2A9D8F]/20 hover:shadow-[#2A9D8F]/40 transition-all duration-300 font-bold px-6 py-6 rounded-xl border border-white/10"
+          >
+            <Plus className="w-5 h-5 mr-2" /> 
+            Nuevo Empleado
+          </Button>
         </div>
         
         {/* Indicadores */}
@@ -332,7 +246,7 @@ export default function GestionNominaContent() {
               />
             </div>
 
-            {/* 🔥 CORRECCIÓN SELECTOR 1: PUESTO */}
+    
             <Select value={filterPuesto} onValueChange={setFilterPuesto}>
               <SelectTrigger className="bg-[#13161C] border-white/10 text-white focus:border-[#2A9D8F] focus:ring-1 focus:ring-[#2A9D8F] transition-all duration-200 rounded-xl h-11 font-medium">
                 <SelectValue placeholder="Puesto" />
@@ -345,7 +259,7 @@ export default function GestionNominaContent() {
               </SelectContent>
             </Select>
 
-            {/* 🔥 CORRECCIÓN SELECTOR 2: SUCURSAL */}
+     
             <Select value={filterSucursal} onValueChange={setFilterSucursal}>
               <SelectTrigger className="bg-[#13161C] border-white/10 text-white focus:border-[#2A9D8F] focus:ring-1 focus:ring-[#2A9D8F] transition-all duration-200 rounded-xl h-11 font-medium">
                 <SelectValue placeholder="Sucursal" />
@@ -358,7 +272,7 @@ export default function GestionNominaContent() {
               </SelectContent>
             </Select>
 
-            {/* 🔥 CORRECCIÓN SELECTOR 3: ESTADO */}
+       
             <Select value={filterEstado} onValueChange={setFilterEstado}>
               <SelectTrigger className="bg-[#13161C] border-white/10 text-white focus:border-[#2A9D8F] focus:ring-1 focus:ring-[#2A9D8F] transition-all duration-200 rounded-xl h-11 font-medium">
                 <SelectValue placeholder="Estado" />
@@ -412,7 +326,7 @@ export default function GestionNominaContent() {
                </TableRow>
             ) : (
               filteredEmployees.map((employee) => (
-                // 🔥 CORRECCIÓN FILA: Se eliminó el fondo blanco predeterminado. Ahora es transparente/gris oscuro
+          
                 <TableRow key={employee.id} className="bg-transparent hover:bg-white/5 border-b border-white/5 transition-colors duration-150">
                   <TableCell className="py-4 pl-4">
                     <Avatar className="w-11 h-11 border-2 border-[#2A9D8F]/50 shadow-sm">
@@ -476,45 +390,22 @@ export default function GestionNominaContent() {
                         <Eye className="w-4 h-4" />
                       </Button>
                       
-                      {userPermissions.canManageEmployees ? (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEditEmployee(employee)}
-                            className="hover:bg-amber-500/20 hover:text-amber-400 text-gray-400 transition-all duration-200 rounded-lg"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteClick(employee)}
-                            className="hover:bg-red-500/20 hover:text-red-400 text-gray-400 transition-all duration-200 rounded-lg"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            disabled
-                            className="text-gray-700 cursor-not-allowed"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            disabled
-                            className="text-gray-700 cursor-not-allowed"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEditEmployee(employee)}
+                        className="hover:bg-amber-500/20 hover:text-amber-400 text-gray-400 transition-all duration-200 rounded-lg"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteClick(employee)}
+                        className="hover:bg-red-500/20 hover:text-red-400 text-gray-400 transition-all duration-200 rounded-lg"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -544,8 +435,9 @@ export default function GestionNominaContent() {
         )}
       </div>
 
-      {/* Modales y Dialogs (Se mantienen igual, solo fondo ajustado en contenedor si era necesario) */}
-      {isModalOpen && userPermissions.canManageEmployees && (
+
+      {/* Modales y Dialogs */}
+      {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300"
@@ -605,7 +497,7 @@ export default function GestionNominaContent() {
         </div>
       )}
 
-      {deleteDialogOpen && userPermissions.canManageEmployees && (
+      {deleteDialogOpen && (
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent className="rounded-[2rem] border-white/10 bg-[#13161C] shadow-2xl">
             <AlertDialogHeader>

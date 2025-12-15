@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Users, UserPlus, GraduationCap, Shield, Settings, HelpCircle, Menu, Bell, AlertCircle, Clock, CheckCircle, Activity } from "lucide-react";
+import { Users, UserPlus, GraduationCap, Shield, Settings, HelpCircle, Menu, Bell, AlertCircle, Clock, CheckCircle, Activity, Loader2 } from "lucide-react";
 import { Button } from "../assets/components/ui/button";
 
 // ============================================
@@ -14,12 +14,60 @@ import GestionReclutamientoContent from "../assets/components/rh/reclutamiento";
 import CapacitacionContent from "../assets/components/rh/capacitacion";
 import CumplimientoLegalContent from "../assets/components/rh/cumplimiento_legal";
 // ============================================
-// DASHBOARD CONTENT (REFACTORIZADO DARK MODE)
+// DASHBOARD CONTENT (CON DATOS REALES DEL BACKEND)
 // ============================================
+import { useDashboardStats } from "../api/useDashboardStats";
+
 function DashboardContent() {
+  const { stats, recentActivity, loading, error } = useDashboardStats();
+
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center h-full">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-[#2A9D8F] mx-auto mb-4" />
+          <p className="text-gray-400">Cargando estadísticas...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-6 text-center">
+          <AlertCircle className="h-12 w-12 text-rose-500 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-white mb-2">Error al cargar datos</h3>
+          <p className="text-gray-400">No se pudieron obtener las estadísticas del dashboard</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Helper para obtener el icono de actividad
+  const getActivityIcon = (type) => {
+    switch(type) {
+      case 'hire': return CheckCircle;
+      case 'training': return GraduationCap;
+      case 'alert': return AlertCircle;
+      default: return Clock;
+    }
+  };
+
+  // Helper para el color
+  const getActivityColor = (color) => {
+    const colors = {
+      emerald: { dot: 'bg-emerald-500 shadow-[0_0_8px_#10B981]', border: 'hover:border-emerald-500/30' },
+      blue: { dot: 'bg-blue-500 shadow-[0_0_8px_#3B82F6]', border: 'hover:border-blue-500/30' },
+      amber: { dot: 'bg-amber-500 shadow-[0_0_8px_#F59E0B]', border: 'hover:border-amber-500/30' },
+      rose: { dot: 'bg-rose-500 shadow-[0_0_8px_#EF4444]', border: 'hover:border-rose-500/30' }
+    };
+    return colors[color] || colors.emerald;
+  };
+
   return (
     <div className="p-8 space-y-6">
-      {/* KPI GRID */}
+      {/* KPI GRID - DATOS REALES */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-[#13161C] p-6 rounded-[2rem] border border-white/10 shadow-lg shadow-black/20 hover:border-[#2A9D8F]/30 transition-all duration-300 group">
           <div className="flex items-center justify-between mb-4">
@@ -28,9 +76,11 @@ function DashboardContent() {
                 <Users className="h-5 w-5 text-[#2A9D8F]" />
             </div>
           </div>
-          <p className="text-4xl font-bold text-white font-['Outfit']">248</p>
+          <p className="text-4xl font-bold text-white font-['Outfit']">{stats.totalEmployees}</p>
           <div className="flex items-center gap-2 mt-2">
-             <span className="text-sm text-emerald-400 font-bold">↑ 12%</span>
+             <span className={`text-sm font-bold ${stats.employeeGrowth > 0 ? 'text-emerald-400' : 'text-gray-500'}`}>
+               {stats.employeeGrowth > 0 ? `↑ ${stats.employeeGrowth}%` : '—'}
+             </span>
              <span className="text-xs text-gray-500">vs mes anterior</span>
           </div>
         </div>
@@ -42,7 +92,7 @@ function DashboardContent() {
                 <UserPlus className="h-5 w-5 text-blue-400" />
             </div>
           </div>
-          <p className="text-4xl font-bold text-white font-['Outfit']">15</p>
+          <p className="text-4xl font-bold text-white font-['Outfit']">{stats.newHires}</p>
           <p className="text-sm text-gray-500 mt-2 font-medium">En el último mes</p>
         </div>
 
@@ -53,45 +103,41 @@ function DashboardContent() {
                 <GraduationCap className="h-5 w-5 text-purple-400" />
             </div>
           </div>
-          <p className="text-4xl font-bold text-white font-['Outfit']">32</p>
+          <p className="text-4xl font-bold text-white font-['Outfit']">{stats.trainingsActive}</p>
           <p className="text-sm text-gray-500 mt-2 font-medium">Programas activos</p>
         </div>
       </div>
 
-      {/* Actividad Reciente */}
+      {/* Actividad Reciente - DATOS REALES */}
       <div className="bg-[#13161C] p-8 rounded-[2rem] border border-white/10 shadow-xl shadow-black/20">
         <h3 className="text-xl font-bold text-white mb-6 font-['Outfit'] flex items-center gap-2">
             <Activity className="w-5 h-5 text-[#2A9D8F]" />
             Actividad Reciente
         </h3>
         <div className="space-y-4">
-          <div className="flex items-start gap-4 p-4 bg-white/5 rounded-xl border border-white/5 hover:border-[#2A9D8F]/30 transition-colors">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full mt-2 shadow-[0_0_8px_#10B981]"></div>
-            <div className="flex-1">
-                <p className="text-sm text-gray-200 font-medium">Juan Pérez fue contratado como Chef</p>
-                <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> Hace 2 horas
-                </p>
+          {recentActivity.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p>No hay actividad reciente</p>
             </div>
-          </div>
-          <div className="flex items-start gap-4 p-4 bg-white/5 rounded-xl border border-white/5 hover:border-blue-500/30 transition-colors">
-            <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 shadow-[0_0_8px_#3B82F6]"></div>
-            <div className="flex-1">
-                <p className="text-sm text-gray-200 font-medium">Capacitación de seguridad alimentaria completada</p>
-                <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3" /> Ayer
-                </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-4 p-4 bg-white/5 rounded-xl border border-white/5 hover:border-amber-500/30 transition-colors">
-            <div className="w-2 h-2 bg-amber-500 rounded-full mt-2 shadow-[0_0_8px_#F59E0B]"></div>
-            <div className="flex-1">
-                <p className="text-sm text-gray-200 font-medium">Revisión de nómina pendiente</p>
-                <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" /> Hace 1 día
-                </p>
-            </div>
-          </div>
+          ) : (
+            recentActivity.map((activity, index) => {
+              const colorStyles = getActivityColor(activity.color);
+              const IconComponent = getActivityIcon(activity.type);
+              
+              return (
+                <div key={index} className={`flex items-start gap-4 p-4 bg-white/5 rounded-xl border border-white/5 ${colorStyles.border} transition-colors`}>
+                  <div className={`w-2 h-2 ${colorStyles.dot} rounded-full mt-2`}></div>
+                  <div className="flex-1">
+                      <p className="text-sm text-gray-200 font-medium">{activity.message}</p>
+                      <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                          <IconComponent className="w-3 h-3" /> {activity.time}
+                      </p>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -116,25 +162,19 @@ function DashboardContent() {
         </div>
 
         <div className="bg-[#13161C] p-8 rounded-[2rem] border border-white/10 shadow-lg shadow-black/20">
-          <h3 className="text-lg font-bold text-white mb-6 font-['Outfit']">Próximas Tareas</h3>
+          <h3 className="text-lg font-bold text-white mb-6 font-['Outfit']">Resumen Rápido</h3>
           <div className="space-y-4">
-            <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors">
-              <div className="w-10 h-10 rounded-full bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
-                  <AlertCircle className="w-5 h-5 text-rose-500" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-bold text-gray-200">Revisión de desempeño</p>
-                <p className="text-xs text-rose-400 font-medium">Vence en 2 días</p>
-              </div>
+            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
+              <span className="text-sm text-gray-300">Empleados Activos</span>
+              <span className="text-lg font-bold text-white">{stats.totalEmployees}</span>
             </div>
-            <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors">
-              <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
-                  <Clock className="w-5 h-5 text-amber-500" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-bold text-gray-200">Actualizar políticas</p>
-                <p className="text-xs text-amber-400 font-medium">Vence en 5 días</p>
-              </div>
+            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
+              <span className="text-sm text-gray-300">Capacitaciones</span>
+              <span className="text-lg font-bold text-white">{stats.trainingsActive}</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
+              <span className="text-sm text-gray-300">Nuevos este mes</span>
+              <span className="text-lg font-bold text-white">{stats.newHires}</span>
             </div>
           </div>
         </div>

@@ -83,7 +83,7 @@ const recruitmentService = {
   
   chatWithIA: async (pregunta) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/postulantes/chat-rrhh/`, {
+      const response = await fetch(`${API_BASE_URL}/postulantes/chat-rrhh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pregunta }),
@@ -133,7 +133,9 @@ export default function GestionReclutamientoContent() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [chatModalOpen, setChatModalOpen] = useState(false);
   const [entrevistaModalOpen, setEntrevistaModalOpen] = useState(false);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedPostulante, setSelectedPostulante] = useState(null);
+  const [selectedCandidateDetails, setSelectedCandidateDetails] = useState(null);
   
   // --- ESTADOS FORMULARIO ENTREVISTA ---
   const [entrevistaData, setEntrevistaData] = useState({
@@ -171,7 +173,7 @@ export default function GestionReclutamientoContent() {
   const handleUploadCV = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const file = formData.get('cv');
+    const file = formData.get('file');
     
     if (!file || file.size === 0) {
       toast.error("Por favor selecciona un archivo CV");
@@ -248,6 +250,11 @@ export default function GestionReclutamientoContent() {
     } catch (error) {
       toast.error("Error al actualizar estado");
     }
+  };
+
+  const handleViewDetails = (postulante) => {
+    setSelectedCandidateDetails(postulante);
+    setDetailsModalOpen(true);
   };
 
   // --- FILTROS ---
@@ -452,7 +459,19 @@ export default function GestionReclutamientoContent() {
                 </TableCell>
 
                 <TableCell className="py-4 max-w-xs">
-                  <p className="text-sm text-gray-400 line-clamp-2 font-light">{postulante.analisis_ia}</p>
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm text-gray-400 line-clamp-2 font-light">{postulante.analisis_ia}</p>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => handleViewDetails(postulante)}
+                      className="w-fit text-xs text-[#2A9D8F] hover:text-[#2A9D8F] hover:bg-[#2A9D8F]/10 p-1 h-auto font-semibold"
+                    >
+                      <FileText className="w-3 h-3 mr-1" />
+                      Ver detalles
+                      <ChevronRight className="w-3 h-3 ml-0.5" />
+                    </Button>
+                  </div>
                 </TableCell>
 
                 <TableCell className="py-4">
@@ -601,7 +620,7 @@ export default function GestionReclutamientoContent() {
                     </div>
                     <div>
                         <label className="text-sm font-bold text-gray-400">CV (PDF)</label>
-                        <Input type="file" name="cv" accept=".pdf" required className="bg-[#0c0e12] border-white/10 text-gray-300 mt-1 file:bg-[#2A9D8F] file:text-white file:border-0" />
+                        <Input type="file" name="file" accept=".pdf" required className="bg-[#0c0e12] border-white/10 text-gray-300 mt-1 file:bg-[#2A9D8F] file:text-white file:border-0" />
                     </div>
                     <div className="flex gap-3 pt-4">
                         <Button type="button" variant="outline" onClick={() => setUploadModalOpen(false)} className="flex-1 border-white/10 text-gray-300 hover:text-white bg-transparent">Cancelar</Button>
@@ -643,6 +662,224 @@ export default function GestionReclutamientoContent() {
                 </div>
             </div>
          </div>
+      )}
+
+      {/* MODAL DE DETALLES DEL CANDIDATO */}
+      {detailsModalOpen && selectedCandidateDetails && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setDetailsModalOpen(false)} />
+          <div className="relative bg-[#0c0e12] rounded-2xl border border-white/10 shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-[#1B4F55] to-[#2A9D8F] p-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Avatar className="w-16 h-16 border-4 border-white/20 shadow-lg">
+                  <AvatarFallback className="bg-[#0c0e12] text-[#2A9D8F] font-bold text-xl">
+                    {selectedCandidateDetails.nombre?.[0]}{selectedCandidateDetails.nombre?.split(' ')[1]?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h2 className="text-2xl font-bold text-white font-['Outfit']">{selectedCandidateDetails.nombre}</h2>
+                  <p className="text-white/70 text-sm font-medium">
+                    Postulación: {new Date(selectedCandidateDetails.fecha_postulacion).toLocaleDateString('es-ES', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setDetailsModalOpen(false)}
+                className="p-2 hover:bg-white/10 rounded-lg text-white/80 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+              
+              {/* Score & Estado */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-[#13161C] rounded-xl p-4 border border-white/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Score IA</p>
+                    <Star className="w-4 h-4 text-[#2A9D8F]" />
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <p className="text-3xl font-bold text-white font-['Outfit']">{selectedCandidateDetails.match_score}</p>
+                    <p className="text-lg text-gray-500">/100</p>
+                  </div>
+                  <div className="mt-2 w-full bg-gray-700 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full ${
+                        selectedCandidateDetails.match_score >= 70 ? 'bg-emerald-500' :
+                        selectedCandidateDetails.match_score >= 50 ? 'bg-amber-500' : 'bg-rose-500'
+                      }`}
+                      style={{ width: `${selectedCandidateDetails.match_score}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-[#13161C] rounded-xl p-4 border border-white/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Estado</p>
+                    {selectedCandidateDetails.es_apto ? 
+                      <CheckCircle className="w-4 h-4 text-emerald-500" /> :
+                      <XCircle className="w-4 h-4 text-rose-500" />
+                    }
+                  </div>
+                  {selectedCandidateDetails.es_apto ? (
+                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 font-bold border px-3 py-1.5">
+                      ✓ Candidato Apto
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-rose-500/20 text-rose-400 border-rose-500/30 font-bold border px-3 py-1.5">
+                      ✗ No Apto
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="bg-[#13161C] rounded-xl p-4 border border-white/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Entrevista</p>
+                    <Calendar className="w-4 h-4 text-[#2A9D8F]" />
+                  </div>
+                  {selectedCandidateDetails.estado_entrevista === 'agendada' ? (
+                    <div>
+                      <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 font-bold border px-3 py-1.5 mb-1">
+                        Agendada
+                      </Badge>
+                      <p className="text-xs text-gray-400 mt-2">
+                        {new Date(selectedCandidateDetails.fecha_entrevista).toLocaleDateString('es-ES')}
+                      </p>
+                    </div>
+                  ) : (
+                    <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 font-bold border px-3 py-1.5">
+                      Pendiente
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Información de Contacto */}
+              <div className="bg-[#13161C] rounded-xl p-6 border border-white/10">
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <User className="w-5 h-5 text-[#2A9D8F]" />
+                  Información de Contacto
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3 bg-[#0c0e12] p-3 rounded-lg">
+                    <div className="p-2 bg-[#2A9D8F]/10 rounded-lg">
+                      <Mail className="w-4 h-4 text-[#2A9D8F]" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium">Email</p>
+                      <p className="text-sm text-white font-semibold">{selectedCandidateDetails.correo}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 bg-[#0c0e12] p-3 rounded-lg">
+                    <div className="p-2 bg-[#2A9D8F]/10 rounded-lg">
+                      <Phone className="w-4 h-4 text-[#2A9D8F]" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium">Teléfono</p>
+                      <p className="text-sm text-white font-semibold">{selectedCandidateDetails.telefono}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Análisis de IA - SECCIÓN DESTACADA */}
+              <div className="bg-gradient-to-br from-[#13161C] to-[#1B4F55]/20 rounded-xl p-6 border border-[#2A9D8F]/30 shadow-lg shadow-[#2A9D8F]/10">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-2 bg-[#2A9D8F]/20 rounded-lg">
+                    <Sparkles className="w-5 h-5 text-[#2A9D8F]" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white">Análisis de Inteligencia Artificial</h3>
+                </div>
+                <div className="bg-[#0c0e12] rounded-lg p-5 border border-white/10">
+                  <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+                    {selectedCandidateDetails.analisis_ia || "No hay análisis disponible"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Notas de Entrevista (si existen) */}
+              {selectedCandidateDetails.notas_entrevista && (
+                <div className="bg-[#13161C] rounded-xl p-6 border border-white/10">
+                  <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5 text-[#2A9D8F]" />
+                    Notas de Entrevista
+                  </h3>
+                  <div className="bg-[#0c0e12] rounded-lg p-4 border border-white/5">
+                    <p className="text-gray-300 text-sm leading-relaxed">
+                      {selectedCandidateDetails.notas_entrevista}
+                    </p>
+                  </div>
+                  {selectedCandidateDetails.modalidad_entrevista && (
+                    <div className="mt-3">
+                      <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 font-semibold">
+                        Modalidad: {selectedCandidateDetails.modalidad_entrevista}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Archivo CV */}
+              <div className="bg-[#13161C] rounded-xl p-6 border border-white/10">
+                <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-[#2A9D8F]" />
+                  Currículum Vitae
+                </h3>
+                <div className="flex items-center justify-between bg-[#0c0e12] p-4 rounded-lg border border-white/5">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-rose-500/10 rounded-lg">
+                      <FileText className="w-6 h-6 text-rose-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">CV - {selectedCandidateDetails.nombre}</p>
+                      <p className="text-xs text-gray-500">PDF Document</p>
+                    </div>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    className="bg-[#2A9D8F] hover:bg-[#1B4F55] text-white"
+                    onClick={() => {
+                      // Aquí puedes agregar lógica para descargar/ver el CV
+                      toast.info("Funcionalidad de descarga en desarrollo");
+                    }}
+                  >
+                    Ver CV
+                  </Button>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Footer con acciones */}
+            <div className="bg-[#13161C] border-t border-white/10 p-4 flex gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setDetailsModalOpen(false)}
+                className="flex-1 border-white/20 text-gray-300 hover:bg-white/5"
+              >
+                Cerrar
+              </Button>
+              <Button 
+                onClick={() => {
+                  handleAgendarEntrevista(selectedCandidateDetails);
+                  setDetailsModalOpen(false);
+                }}
+                className="flex-1 bg-[#2A9D8F] hover:bg-[#1B4F55] text-white"
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Agendar Entrevista
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
