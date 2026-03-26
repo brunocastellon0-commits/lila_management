@@ -8,11 +8,14 @@ import { Loader2 } from 'lucide-react';
  * Redirige a /login si el usuario no está autenticado
  */
 export function ProtectedRoute({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(null); // null = verificando, true/false = resultado
-  const [isVerifying, setIsVerifying] = useState(true);
+  // Inicializamos directamente desde la caché sincrónica. Si está validado, isAuthenticated es true.
+  const [isAuthenticated, setIsAuthenticated] = useState(() => authService.isTokenVerifiedCached() ? true : null); 
+  const [isVerifying, setIsVerifying] = useState(() => !authService.isTokenVerifiedCached());
 
   useEffect(() => {
-    verifyAuthentication();
+    if (!authService.isTokenVerifiedCached()) {
+      verifyAuthentication();
+    }
   }, []);
 
   const verifyAuthentication = async () => {
@@ -23,7 +26,7 @@ export function ProtectedRoute({ children }) {
       return;
     }
 
-    // Verificamos que el token sea válido con el backend
+    // Verificamos que el token sea válido con el backend (ahora usando caché interna si aplica)
     try {
       const isValid = await authService.verifyToken();
       setIsAuthenticated(isValid);

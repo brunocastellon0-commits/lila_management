@@ -1,28 +1,41 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:7000';
+
+// Caché a nivel módulo
+let globalStatsCache = null;
+let globalActivityCache = null;
+let globalLastFetch = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
 /**
  * Hook personalizado para obtener estadísticas del dashboard de RH
  */
 export function useDashboardStats() {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState(globalStatsCache || {
     totalEmployees: 0,
     newHires: 0,
     trainingsActive: 0,
     employeeGrowth: 0,
   });
   
-  const [recentActivity, setRecentActivity] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [recentActivity, setRecentActivity] = useState(globalActivityCache || []);
+  const [loading, setLoading] = useState(!globalStatsCache);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (forceRefresh = false) => {
+    if (!forceRefresh && globalStatsCache && (Date.now() - globalLastFetch < CACHE_TTL)) {
+      setStats(globalStatsCache);
+      setRecentActivity(globalActivityCache);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       
@@ -47,15 +60,18 @@ export function useDashboardStats() {
       // Capacitaciones activas (no completadas)
       const activeTrainings = trainings.filter(t => !t.completado).length;
       
-      // Calcular crecimiento (simulado por ahora, idealmente vendría del backend)
+      // Calcular crecimiento
       const employeeGrowth = employees.length > 0 ? Math.round((newHires / employees.length) * 100) : 0;
       
-      setStats({
+      const newStats = {
         totalEmployees: employees.length,
         newHires: newHires,
         trainingsActive: activeTrainings,
         employeeGrowth: employeeGrowth
-      });
+      };
+      
+      setStats(newStats);
+      globalStatsCache = newStats;
       
       // Generar actividad reciente basada en datos reales
       const activities = [];
@@ -111,7 +127,10 @@ export function useDashboardStats() {
         console.log('No se pudieron cargar documentos legales');
       }
       
-      setRecentActivity(activities.slice(0, 5)); // Máximo 5 actividades
+      const finalActivities = activities.slice(0, 5);
+      setRecentActivity(finalActivities);
+      globalActivityCache = finalActivities;
+      globalLastFetch = Date.now();
       
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -126,6 +145,6 @@ export function useDashboardStats() {
     recentActivity,
     loading,
     error,
-    refresh: fetchDashboardData
+    refresh: () => fetchDashboardData(true)
   };
 }

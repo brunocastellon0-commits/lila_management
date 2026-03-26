@@ -13,16 +13,29 @@ import { fetchAPI } from '../api/config';
 // Prefijo del microservicio en el gateway
 const RH_PREFIX = '/rh';
 
+// Caché en memoria para evitar recargas en cada cambio de pestaña
+const cache = {
+  employees: null,
+  lastFetch: 0
+};
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
 export const employeeService = {
   /**
    * Obtiene todos los empleados
    * @param {number} skip - Número de registros a saltar (paginación)
    * @param {number} limit - Número máximo de registros a retornar
+   * @param {boolean} forceRefresh - Forzar recarga desde el API
    * @returns {Promise<Array>} Lista de empleados
    */
-  getAllEmployees: async (skip = 0, limit = 100) => {
+  getAllEmployees: async (skip = 0, limit = 100, forceRefresh = false) => {
     try {
+      if (!forceRefresh && cache.employees && (Date.now() - cache.lastFetch < CACHE_TTL)) {
+        return cache.employees;
+      }
       const data = await fetchAPI(`${RH_PREFIX}/employees?skip=${skip}&limit=${limit}`);
+      cache.employees = data;
+      cache.lastFetch = Date.now();
       return data;
     } catch (error) {
       console.error('Error obteniendo empleados:', error);
@@ -57,6 +70,7 @@ export const employeeService = {
         method: 'POST',
         body: JSON.stringify(employeeData)
       });
+      cache.employees = null; // Invalidate cache
       return data;
     } catch (error) {
       console.error('Error creando empleado:', error);
@@ -69,6 +83,7 @@ export const employeeService = {
         method: 'POST',
         body: JSON.stringify(employeeData)
       });
+      cache.employees = null; // Invalidate cache
       return data;
     } catch (error) {
       console.error('Error creando empleado con usuario:', error);
@@ -88,6 +103,7 @@ export const employeeService = {
         method: 'PUT',
         body: JSON.stringify(employeeData)
       });
+      cache.employees = null; // Invalidate cache
       return data;
     } catch (error) {
       console.error(`Error actualizando empleado ${employeeId}:`, error);
@@ -105,6 +121,7 @@ export const employeeService = {
       const data = await fetchAPI(`${RH_PREFIX}/employees/${employeeId}`, {
         method: 'DELETE'
       });
+      cache.employees = null; // Invalidate cache
       return data;
     } catch (error) {
       console.error(`Error eliminando empleado ${employeeId}:`, error);

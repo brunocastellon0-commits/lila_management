@@ -58,11 +58,22 @@ const COURSE_THEMES = [
   }
 ];
 
+// ==========================================
+// CACHÉ A NIVEL MÓDULO PARA EVITAR RECARGAS
+// ==========================================
+let capacitacionCache = {
+  trainings: null,
+  employees: null,
+  lastFetchTrainings: 0,
+  lastFetchEmployees: 0,
+};
+const CACHE_TTL = 5 * 60 * 1000;
+
 export default function CapacitacionContent() {
-  const [trainings, setTrainings] = useState([]);
-  const [employees, setEmployees] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingEmployees, setLoadingEmployees] = useState(true);
+  const [trainings, setTrainings] = useState(capacitacionCache.trainings || []);
+  const [employees, setEmployees] = useState(capacitacionCache.employees || []);
+  const [loading, setLoading] = useState(!capacitacionCache.trainings);
+  const [loadingEmployees, setLoadingEmployees] = useState(!capacitacionCache.employees);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
 
@@ -76,10 +87,18 @@ export default function CapacitacionContent() {
     fecha_limite: "",
   });
 
-  const fetchTrainings = async () => {
+  const fetchTrainings = async (forceRefresh = false) => {
     try {
+      if (!forceRefresh && capacitacionCache.trainings && (Date.now() - capacitacionCache.lastFetchTrainings < CACHE_TTL)) {
+        setTrainings(capacitacionCache.trainings);
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
       const response = await axios.get(`${API_URL}/api/rh/training`);
       setTrainings(response.data);
+      capacitacionCache.trainings = response.data;
+      capacitacionCache.lastFetchTrainings = Date.now();
     } catch (error) {
       console.error("Error al cargar capacitaciones:", error);
     } finally {
@@ -87,10 +106,18 @@ export default function CapacitacionContent() {
     }
   };
 
-  const fetchEmployees = async () => {
+  const fetchEmployees = async (forceRefresh = false) => {
     try {
+      if (!forceRefresh && capacitacionCache.employees && (Date.now() - capacitacionCache.lastFetchEmployees < CACHE_TTL)) {
+        setEmployees(capacitacionCache.employees);
+        setLoadingEmployees(false);
+        return;
+      }
+      setLoadingEmployees(true);
       const response = await axios.get(`${API_URL}/api/rh/employees`);
       setEmployees(response.data);
+      capacitacionCache.employees = response.data;
+      capacitacionCache.lastFetchEmployees = Date.now();
     } catch (error) {
       console.error("Error al cargar empleados:", error);
     } finally {
@@ -131,7 +158,8 @@ export default function CapacitacionContent() {
       setNewTraining({ ...newTraining, nombre_capacitacion: "", employee_id: "" });
       setSelectedEmployee(null); // Reset empleado seleccionado
       setSelectedTheme(COURSE_THEMES[4]); // Reset
-      fetchTrainings(); 
+      capacitacionCache.trainings = null; // Invalidate cache
+      fetchTrainings(true); // Force API to refresh
     } catch (error) {
       alert("Error al asignar el curso. Verifica los datos.");
       console.error(error);

@@ -1,40 +1,33 @@
+# rh_service/app/main.py
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.base import api_router 
-from app.utils.config import settings 
 
-# 1. Inicialización de la aplicación FastAPI
+from app.utils.config import settings
+from app.api.base import api_router
+
+# ── Aplicación ───────────────────────────────────────────────
 app = FastAPI(
     title="RH Service API",
     description="Microservicio para la gestión de Recursos Humanos (HR).",
     version="1.0.0",
     debug=settings.DEBUG,
-    redirect_slashes=False
+    redirect_slashes=False,
 )
 
-# 2. Configuración del Middleware CORS 
-origins = [
-    "http://localhost",
-    "http://localhost:5173",
-    "http://localhost:7000",  # ✅ Agregar el gateway
-]
-
+# ── CORS ─────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 4. Inclusión de las Rutas (Endpoints)
-# ✅ CORRECCIÓN: SIN prefijo /rh porque el gateway ya lo maneja
-app.include_router(
-    api_router,
-    # prefix="/rh",  ❌ ELIMINAR ESTO - El gateway ya usa /rh
-    tags=["API General"]
-)
+# ── Routers ──────────────────────────────────────────────────
+app.include_router(api_router, tags=["API General"])
 
+# ── Rutas utilitarias ────────────────────────────────────────
 @app.get("/")
 def read_root():
     return {"message": "RH Service is running!"}

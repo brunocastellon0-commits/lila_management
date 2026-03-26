@@ -1,6 +1,6 @@
 # user_service/routes/auth_routes.py
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.schemas.user_schema import UserCreate, UserResponse
@@ -189,17 +189,57 @@ async def refresh_token_endpoint(token_data: dict, db: Session = Depends(get_db)
 # VERIFICAR TOKEN
 # -----------------------------
 @routes.get("/verify")
-async def verify_token(db: Session = Depends(get_db)):
+async def verify_token_endpoint(authorization: str = Header(None), db: Session = Depends(get_db)):
     """
     Endpoint para verificar si el token JWT es válido.
     Este endpoint requiere el token en el header Authorization.
     
     Retorna 200 OK si el token es válido, 401 si no lo es.
     """
-    from fastapi import Request
-    from app.services.auth_service import verify_jwt_token
+    from app.services.auth_service import verify_token
     
-    # Este endpoint será llamado con el header Authorization
-    # FastAPI lo procesará automáticamente con depends en producción
-    # Por ahora retornamos un simple OK para indicar que llegó aquí
-    return {"status": "valid", "message": "Token is valid"}
+    # Obtener el header Authorization
+    if not authorization:
+        logger.warning("Intento de verificación sin token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token no proporcionado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Extraer el token del formato "Bearer <token>"
+    try:
+        scheme, token = authorization.split()
+        if scheme.lower() != 'bearer':
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Esquema de autenticación inválido",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Formato de token inválido",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Verificar el token
+    token_data = verify_token(token)
+    if not token_data:
+        logger.warning("Token inválido o expirado")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido o expirado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    logger.info(f"Token verificado exitosamente para usuario: {token_data.get('username')}")
+    return {
+        "status": "valid", 
+        "message": "Token is valid",
+        "user": {
+            "username": token_data.get("username"),
+            "user_id": token_data.get("user_id"),
+            "role": token_data.get("role")
+        }
+    }

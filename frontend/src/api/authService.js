@@ -2,10 +2,24 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:7000';
 
+let lastVerificationTime = 0;
+let isVerifiedStatus = false;
+
 /**
  * Servicio de autenticación para comunicarse con el backend
  */
 export const authService = {
+  /**
+   * Verifica de manera síncrona si hay un token válido en caché
+   * @returns {boolean}
+   */
+  isTokenVerifiedCached() {
+    const token = localStorage.getItem('token');
+    if (!token) return false;
+    // Cache de 5 minutos (300000 ms)
+    return isVerifiedStatus && (Date.now() - lastVerificationTime < 300000);
+  },
+
   /**
    * Verifica si el token es válido
    * @returns {Promise<boolean>}
@@ -13,7 +27,12 @@ export const authService = {
   async verifyToken() {
     const token = localStorage.getItem('token');
     if (!token) {
+      isVerifiedStatus = false;
       return false;
+    }
+
+    if (this.isTokenVerifiedCached()) {
+      return true;
     }
 
     try {
@@ -22,9 +41,15 @@ export const authService = {
           'Authorization': `Bearer ${token}`
         }
       });
-      return response.status === 200;
+      if (response.status === 200) {
+        isVerifiedStatus = true;
+        lastVerificationTime = Date.now();
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error('Error verifying token:', error);
+      isVerifiedStatus = false;
       return false;
     }
   },
@@ -58,6 +83,8 @@ export const authService = {
    * Cierra sesión y limpia el localStorage
    */
   logout() {
+    isVerifiedStatus = false;
+    lastVerificationTime = 0;
     localStorage.removeItem('token');
     localStorage.removeItem('usuario_id');
     localStorage.removeItem('username');
@@ -86,6 +113,9 @@ export const authService = {
         localStorage.setItem('username', response.data.user.username);
         localStorage.setItem('email', response.data.user.email);
         localStorage.setItem('role', response.data.user.role);
+
+        isVerifiedStatus = true;
+        lastVerificationTime = Date.now();
 
         return {
           success: true,

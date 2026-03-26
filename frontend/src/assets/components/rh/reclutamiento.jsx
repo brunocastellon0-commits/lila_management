@@ -34,18 +34,27 @@ import {
 const API_BASE_URL = "http://localhost:7000/api/rh";
 
 // ==========================================
-// SERVICIO API (Lógica de Negocio)
+// SERVICIO API Y CACHÉ
 // ==========================================
+let postulantesCache = null;
+let lastPostulantesFetch = 0;
+const CACHE_TTL = 5 * 60 * 1000;
+
 const recruitmentService = {
-  getAllPostulantes: async () => {
+  getAllPostulantes: async (forceRefresh = false) => {
     try {
+      if (!forceRefresh && postulantesCache && (Date.now() - lastPostulantesFetch < CACHE_TTL)) {
+        return postulantesCache;
+      }
       const response = await fetch(`${API_BASE_URL}/postulantes`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      return data || [];
+      postulantesCache = data || [];
+      lastPostulantesFetch = Date.now();
+      return postulantesCache;
     } catch (error) {
       console.error('Error fetching postulantes:', error);
       throw error;
@@ -59,6 +68,7 @@ const recruitmentService = {
         body: formData,
       });
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      postulantesCache = null; // Invalidate cache
       return await response.json();
     } catch (error) {
       console.error('Error creating postulante:', error);
@@ -74,6 +84,7 @@ const recruitmentService = {
         body: JSON.stringify(data),
       });
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      postulantesCache = null; // Invalidate cache
       return await response.json();
     } catch (error) {
       console.error('Error updating postulante:', error);

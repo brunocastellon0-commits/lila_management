@@ -522,75 +522,6 @@ async def read_postulantes_via_gateway(request: Request):
     )
 
 
-
-
-# ========================================
-# RUTAS DE POSTULANTES (IA)
-# ========================================
-
-@router.post("/postulantes", status_code=201)
-async def create_postulante_via_gateway(request: Request):
-    """
-    Crea un postulante con archivo PDF (Multipart).
-    Reenvía la solicitud multipart al microservicio.
-    """
-    # Leemos el form data (incluye archivos)
-    form = await request.form()
-    
-    # Preparamos los datos para httpx
-    files_to_send = {}
-    data_to_send = {}
-    
-    for key, value in form.items():
-        if isinstance(value, str):
-            data_to_send[key] = value
-        else:
-            # Es un UploadFile
-            content = await value.read()
-            files_to_send[key] = (value.filename, content, value.content_type)
-            
-    # Headers: Copiamos auth, pero NO content-type (httpx lo pone con boundary)
-    headers = {}
-    if "authorization" in request.headers:
-        headers["authorization"] = request.headers["authorization"]
-
-    async with httpx.AsyncClient(timeout=settings.request_timeout) as client:
-        try:
-            response = await client.post(
-                f"{settings.rh_service_url}/postulantes/",
-                files=files_to_send,
-                data=data_to_send,
-                headers=headers
-            )
-            
-            # CORS headers
-            cors_headers = {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization",
-                "Access-Control-Allow-Credentials": "true"
-            }
-            
-            return JSONResponse(
-                content=response.json(), 
-                status_code=response.status_code,
-                headers=cors_headers
-            )
-        except Exception as e:
-             raise HTTPException(status_code=500, detail=f"Error forwarding multipart: {str(e)}")
-
-
-@router.get("/postulantes")
-async def read_postulantes_via_gateway(request: Request):
-    """Listar postulantes."""
-    return await forward_request(
-        "GET",
-        f"{settings.rh_service_url}/postulantes/",
-        params=dict(request.query_params),
-        headers=dict(request.headers.items()),
-    )
-
-
 @router.get("/postulantes/{postulante_id}")
 async def read_postulante_by_id_via_gateway(postulante_id: int, request: Request):
     """Obtener postulante por ID."""
@@ -616,11 +547,48 @@ async def update_postulante_via_gateway(postulante_id: int, request: Request):
 @router.post("/postulantes/chat-rrhh/")
 @router.post("/postulantes/chat-rrhh") 
 async def chat_rrhh_via_gateway(request: Request):
-    """Chat con IA para consultas sobre postulantes (RAG)."""
+    """
+    Chat con IA para consultas sobre postulantes (RAG).
+    Usa timeout extendido para operaciones de IA con Ollama.
+    """
     data = await request.json()
-    return await forward_request(
-        "POST",
-        f"{settings.rh_service_url}/postulantes/chat-rrhh",
-        data=data,
-        headers=dict(request.headers.items()),
-    )
+    
+    # Timeout extendido para operaciones de IA (3 minutos)
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(180.0, connect=10.0),
+        follow_redirects=False
+    ) as client:
+        try:
+            response = await client.post(
+                f"{settings.rh_service_url}/postulantes/chat-rrhh",
+                json=data,
+                headers={
+                    k: v for k, v in request.headers.items()
+                    if k.lower() in ["authorization", "content-type"]
+                }
+            )
+            
+            # CORS headers
+            cors_headers = {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization",
+                "Access-Control-Allow-Credentials": "true"
+            }
+            
+            return JSONResponse(
+                content=response.json() if response.content else {"error": "No response"},
+                status_code=response.status_code,
+                headers=cors_headers
+            )
+            
+        except httpx.TimeoutException:
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                detail="El modelo de IA está tardando demasiado. Intenta con una pregunta más corta o verifica que Ollama esté funcionando correctamente."
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error en el chat de IA: {str(e)}"
+            )

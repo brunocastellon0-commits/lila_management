@@ -1,146 +1,117 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// MomentsGallery.jsx — Paleta oscura cálida
+// ═══════════════════════════════════════════════════════════════════════════
 import { motion } from "framer-motion";
 import { Play, Instagram, Maximize2, ArrowUpRight } from "lucide-react";
-
+ 
 const galleryItems = [
-  {
-    id: 1,
-    type: "image",
-    size: "large", // Ocupa 2 espacios (Cuadrado grande)
-    src: "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?q=80&w=1080",
-    title: "Noches de Jazz",
-    category: "Eventos",
-    date: "Jueves 20:00"
-  },
-  {
-    id: 2,
-    type: "video", // Vertical alto
-    size: "tall", 
-    src: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=1080",
-    title: "After Office",
-    category: "Vibra",
-    date: "Lun - Vie"
-  },
-  {
-    id: 3,
-    type: "image", // Cuadrado pequeño
-    size: "small",
-    src: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=1080",
-    title: "Latte Art",
-    category: "Café",
-    date: "Barista Skills"
-  },
-  {
-    id: 4,
-    type: "image", // Cuadrado pequeño
-    size: "small",
-    src: "https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=1080",
-    title: "Nuestra Barra",
-    category: "Espacio",
-    date: "Visítanos"
-  },
+  { id:1, type:"image", size:"large", src:"https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?q=80&w=1080", title:"Noches de Jazz", category:"Eventos", date:"Jueves 20:00" },
+  { id:2, type:"video", size:"tall",  src:"https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1080",  title:"After Office",  category:"Vibra",   date:"Lun - Vie" },
+  { id:3, type:"image", size:"small", src:"https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=1080",   title:"Latte Art",    category:"Café",    date:"Barista Skills" },
+  { id:4, type:"image", size:"small", src:"https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=1080",  title:"Nuestra Barra",category:"Espacio", date:"Visítanos" },
 ];
-
+ 
 export function MomentsGallery() {
   return (
-    <section className="py-24 bg-transparent relative overflow-hidden">
-      
-      {/* Elemento decorativo de fondo (Blob sutil) */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#2A9D8F]/5 rounded-full blur-3xl pointer-events-none" />
-
+    <section className="py-16 relative overflow-hidden" style={{ background: 'transparent' }}>
+      {/* Orbe decorativo */}
+      <div className="absolute top-0 right-0 w-96 h-96 rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(200,135,78,0.06) 0%, transparent 70%)', filter: 'blur(60px)' }} />
+ 
       <div className="container mx-auto px-4 relative z-10">
-        
-        {/* --- ENCABEZADO --- */}
-        <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
-          <div className="max-w-xl space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1B4F55] text-white text-xs font-bold tracking-widest uppercase">
-                <Instagram className="w-3 h-3" />
-                @labourboneria.bo
+ 
+        {/* Encabezado */}
+        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-8">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-bold tracking-widest uppercase"
+              style={{ background: 'rgba(200,135,78,0.15)', border: '1px solid rgba(200,135,78,0.25)', color: '#C8874E' }}>
+              <Instagram className="w-3 h-3" /> @labourboneria.bo
             </div>
-            
-            <h2 className="text-4xl md:text-6xl font-extrabold text-[#1B4F55] font-['Outfit'] leading-tight">
+            <h2 className="text-4xl md:text-5xl font-light leading-tight"
+              style={{ fontFamily: "'Playfair Display', serif", color: '#F5F0E8' }}>
               Momentos que <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#1B4F55] to-[#2A9D8F]">
+              <span style={{ WebkitTextFillColor:'transparent', WebkitBackgroundClip:'text', backgroundClip:'text',
+                backgroundImage:'linear-gradient(to right, #C8874E, #E9C46A)' }}>
                 inspiran
               </span>
             </h2>
           </div>
-
-          <div className="flex gap-4">
-             <button className="group flex items-center gap-3 px-8 py-4 bg-white border-2 border-[#1B4F55]/10 rounded-full shadow-lg shadow-[#1B4F55]/5 hover:border-[#1B4F55] hover:shadow-xl transition-all duration-300">
-                <div className="p-1.5 bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 rounded-full text-white">
-                    <Instagram className="w-4 h-4" />
-                </div>
-                <span className="text-[#1B4F55] font-bold font-['Outfit'] group-hover:text-[#2A9D8F] transition-colors">
-                    Síguenos en Instagram
-                </span>
-                <ArrowUpRight className="w-5 h-5 text-[#1B4F55]/40 group-hover:text-[#2A9D8F] group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-             </button>
-          </div>
+ 
+          <button
+            className="group flex items-center gap-3 px-7 py-3.5 rounded-full transition-all duration-300"
+            style={{ background: 'rgba(34,22,8,0.7)', border: '1px solid rgba(200,135,78,0.2)',
+              backdropFilter:'blur(8px)' }}
+            onMouseEnter={e=>e.currentTarget.style.borderColor='rgba(200,135,78,0.5)'}
+            onMouseLeave={e=>e.currentTarget.style.borderColor='rgba(200,135,78,0.2)'}
+          >
+            <div className="p-1.5 rounded-full" style={{ background: 'linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366)' }}>
+              <Instagram className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-medium text-sm" style={{ color: '#F5F0E8', fontFamily:"'DM Sans',sans-serif" }}>
+              Síguenos en Instagram
+            </span>
+            <ArrowUpRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+              style={{ color: 'rgba(200,135,78,0.6)' }} />
+          </button>
         </div>
-
-        {/* --- BENTO GRID (Mosaico) --- */}
-        <div className="grid grid-cols-1 md:grid-cols-4 grid-rows-2 gap-6 h-auto md:h-[650px]">
-          
-          {galleryItems.map((item, index) => (
+ 
+        {/* Bento grid */}
+        <div className="grid grid-cols-1 md:grid-cols-4 grid-rows-2 gap-4 h-auto md:h-[600px]">
+          {galleryItems.map((item, idx) => (
             <motion.div
               key={item.id}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.15, duration: 0.6 }}
-              viewport={{ once: true }}
-              className={`
-                relative group rounded-[2rem] overflow-hidden cursor-pointer shadow-md hover:shadow-2xl hover:shadow-[#2A9D8F]/20 transition-all duration-500
-                ${item.size === 'large' ? 'md:col-span-2 md:row-span-2' : ''}
-                ${item.size === 'tall' ? 'md:col-span-1 md:row-span-2' : ''}
-                ${item.size === 'small' ? 'md:col-span-1 md:row-span-1' : ''}
-              `}
+              initial={{ opacity:0, y:30 }}
+              whileInView={{ opacity:1, y:0 }}
+              transition={{ delay: idx*0.12, duration:0.6 }}
+              viewport={{ once:true }}
+              className={`relative group rounded-2xl overflow-hidden cursor-pointer transition-all duration-500
+                ${item.size==='large' ? 'md:col-span-2 md:row-span-2':''}
+                ${item.size==='tall'  ? 'md:col-span-1 md:row-span-2':''}
+                ${item.size==='small' ? 'md:col-span-1 md:row-span-1':''}
+                ${item.size==='small' ? 'min-h-[200px]' : ''}`}
+              style={{ boxShadow:'0 4px 20px rgba(0,0,0,0.4)' }}
             >
-              {/* Imagen con zoom suave */}
-              <img 
-                src={item.src} 
-                alt={item.title} 
-                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+              <img src={item.src} alt={item.title}
+                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-108" />
+ 
+              {/* Overlay cálido — reemplaza el overlay teal frío */}
+              <div className="absolute inset-0 transition-opacity duration-400"
+                style={{ background:'linear-gradient(to top, rgba(44,30,14,0.92) 0%, rgba(44,30,14,0.25) 50%, transparent 100%)',
+                  opacity: 0.7 }}
+                onMouseEnter={e=>e.currentTarget.style.opacity='0.92'}
+                onMouseLeave={e=>e.currentTarget.style.opacity='0.7'}
               />
-              
-              {/* Overlay: Degradado de la marca (No negro puro) */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#1B4F55]/90 via-[#1B4F55]/20 to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300" />
-
-              {/* Icono de Play (Estilo Glassmorphism) */}
-              {item.type === 'video' && (
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/40 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                    <Play className="w-8 h-8 text-white fill-white translate-x-1" />
+ 
+              {item.type==='video' && (
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
+                  style={{ background:'rgba(200,135,78,0.2)', backdropFilter:'blur(8px)', border:'1px solid rgba(200,135,78,0.4)' }}>
+                  <Play className="w-7 h-7 fill-white text-white translate-x-0.5" />
                 </div>
               )}
-
-              {/* Información Flotante */}
-              <div className="absolute inset-0 p-8 flex flex-col justify-end translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                 
-                 {/* Categoría Badge */}
-                 <div className="self-start mb-2 overflow-hidden">
-                     <span className="inline-block px-3 py-1 rounded-lg bg-[#2A9D8F] text-white text-[10px] font-bold uppercase tracking-widest shadow-sm transform translate-y-8 group-hover:translate-y-0 transition-transform duration-300 delay-75">
-                        {item.category}
-                     </span>
-                 </div>
-
-                 <div className="flex justify-between items-end border-t border-white/20 pt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
-                    <div>
-                        <h3 className="text-white text-2xl font-bold font-['Outfit'] leading-none mb-1">
-                           {item.title}
-                        </h3>
-                        <p className="text-white/70 text-sm font-medium">
-                            {item.date}
-                        </p>
-                    </div>
-                    <div className="p-2 bg-white rounded-full text-[#1B4F55] hover:bg-[#2A9D8F] hover:text-white transition-colors">
-                        <Maximize2 className="w-5 h-5" />
-                    </div>
-                 </div>
+ 
+              <div className="absolute inset-0 p-6 flex flex-col justify-end translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                <span className="self-start mb-2 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase tracking-widest transform translate-y-6 group-hover:translate-y-0 transition-transform duration-300 delay-75"
+                  style={{ background:'rgba(200,135,78,0.25)', border:'1px solid rgba(200,135,78,0.35)', color:'#E9C46A' }}>
+                  {item.category}
+                </span>
+                <div className="flex justify-between items-end border-t pt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100"
+                  style={{ borderColor:'rgba(200,135,78,0.2)' }}>
+                  <div>
+                    <h3 className="text-xl font-light leading-none mb-1" style={{ fontFamily:"'Playfair Display',serif", color:'#F5F0E8' }}>
+                      {item.title}
+                    </h3>
+                    <p className="text-xs font-mono" style={{ color:'rgba(245,240,232,0.5)' }}>{item.date}</p>
+                  </div>
+                  <div className="p-2 rounded-full" style={{ background:'rgba(200,135,78,0.2)', border:'1px solid rgba(200,135,78,0.3)' }}>
+                    <Maximize2 className="w-4 h-4" style={{ color:'#C8874E' }} />
+                  </div>
+                </div>
               </div>
             </motion.div>
           ))}
         </div>
-
       </div>
     </section>
   );
 }
+ 

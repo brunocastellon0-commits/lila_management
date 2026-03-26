@@ -1,150 +1,120 @@
-import { useState, useRef } from "react";
-import { Briefcase, Upload, Calendar, CheckCircle2, FileText, ArrowRight } from "lucide-react";
-import { Button } from "../ui/button";
-import { motion } from "framer-motion";
-
+// ═══════════════════════════════════════════════════════════════════════════
+// Newsletter.jsx — Paleta oscura cálida
+// ═══════════════════════════════════════════════════════════════════════════
+import { useState as useStateN, useRef as useRefN } from "react";
+import { Briefcase, Upload, FileText, ArrowRight as ArrowRightN } from "lucide-react";
+import { motion as motionN } from "framer-motion";
+ 
 export function Newsletter() {
-  const [file, setFile] = useState(null);
-  const fileInputRef = useRef(null);
-
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-    }
-  };
-
-  const triggerFileInput = () => {
-    fileInputRef.current.click();
-  };
-
+  const [file, setFile] = useStateN(null);
+  const fileInputRef = useRefN(null);
+  const handleFileChange = e => { if(e.target.files?.[0]) setFile(e.target.files[0]); };
+ 
   return (
-    // CAMBIO 1: Fondo de sección transparente o muy oscuro para fundirse con la web
-    <section className="w-full py-16 px-4 flex justify-center bg-[#0c0e12]">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-        // CAMBIO 2: Card principal oscura (bg-[#13161C]) en lugar de blanca
-        // Borde sutil en Cyan/Teal para delimitar
-        className="relative w-full max-w-5xl bg-[#13161C] rounded-[2rem] border-2 border-[#1B4F55]/30 shadow-[0_0_40px_-10px_rgba(27,79,85,0.2)] overflow-hidden"
+    <section className="w-full py-8 px-4 flex justify-center">
+      <motionN.div
+        initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }}
+        viewport={{ once:true }} transition={{ duration:0.6 }}
+        className="relative w-full max-w-5xl overflow-hidden rounded-2xl"
+        style={{ background:'rgba(34,22,8,0.8)', backdropFilter:'blur(16px)',
+          WebkitBackdropFilter:'blur(16px)', border:'1px solid rgba(200,135,78,0.2)',
+          boxShadow:'0 20px 60px rgba(0,0,0,0.4)' }}
       >
-        
-        <div className="grid md:grid-cols-12 gap-0">
-          
-          {/* --- COLUMNA IZQUIERDA --- */}
-          {/* CAMBIO 3: Fondo tintado de verde oscuro en lugar de menta claro */}
-          <div className="md:col-span-7 p-8 md:p-12 flex flex-col justify-center bg-[#1B4F55]/10">
-            
+        {/* Orbe decorativo */}
+        <div className="absolute top-0 right-0 w-64 h-64 rounded-full pointer-events-none"
+          style={{ background:'radial-gradient(circle, rgba(200,135,78,0.08) 0%, transparent 70%)', filter:'blur(40px)', transform:'translate(30%,-30%)' }} />
+ 
+        <div className="grid md:grid-cols-12">
+          {/* Columna izquierda */}
+          <div className="md:col-span-7 p-8 md:p-12 flex flex-col justify-center" style={{ borderRight:'1px solid rgba(200,135,78,0.1)' }}>
             <div className="flex flex-col gap-6">
-              {/* Badge: Cyan sobre fondo oscuro */}
-              <div className="inline-flex items-center gap-2 self-start px-4 py-1.5 rounded-full bg-[#2A9D8F]/20 text-[#2A9D8F] text-xs font-bold tracking-wider uppercase border border-[#2A9D8F]/20">
-                <Briefcase className="w-3 h-3" />
-                Talento Humano
+              <div className="inline-flex items-center gap-2 self-start px-4 py-1.5 rounded-full text-xs font-mono font-bold tracking-wider uppercase"
+                style={{ background:'rgba(200,135,78,0.15)', border:'1px solid rgba(200,135,78,0.25)', color:'#C8874E' }}>
+                <Briefcase className="w-3 h-3" /> Talento Humano
               </div>
-
-              {/* Títulos: Blanco y Cyan */}
-              <h2 className="text-3xl md:text-4xl font-extrabold text-white leading-tight font-['Outfit']">
+ 
+              <h2 className="text-3xl md:text-4xl font-light leading-tight"
+                style={{ fontFamily:"'Playfair Display',serif", color:'#F5F0E8' }}>
                 Únete a <br/>
-                <span className="text-[#2A9D8F]">La Bourboneria</span>
+                <span style={{ color:'#C8874E' }}>La Bourboneria</span>
               </h2>
-            
-              {/* Texto descriptivo: Gris claro para contraste */}
-              <p className="text-gray-400 leading-relaxed text-lg font-medium">
+ 
+              <p className="text-lg font-light leading-relaxed" style={{ color:'rgba(245,240,232,0.55)' }}>
                 Buscamos gente con la misma energía que nuestro café. Si te apasiona la excelencia, este es tu lugar.
               </p>
-
-              {/* Steps visuales */}
-              <div className="space-y-4 mt-2">
-                <div className="flex items-center gap-4">
-                  {/* Paso 1: Círculo sólido Teal */}
-                  <div className="w-10 h-10 rounded-full bg-[#1B4F55] flex items-center justify-center text-white font-bold shrink-0 ring-2 ring-[#1B4F55]/50">1</div>
-                  <p className="text-gray-300 text-sm">Sube tu CV en formato PDF o Word.</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  {/* Paso 2: Círculo bordeado claro */}
-                  <div className="w-10 h-10 rounded-full bg-transparent border-2 border-[#2A9D8F] text-[#2A9D8F] flex items-center justify-center font-bold shrink-0">2</div>
-                  <p className="text-gray-300 text-sm">Nuestro equipo revisa tu perfil en <span className="font-bold text-[#2A9D8F]">24 hrs</span>.</p>
-                </div>
+ 
+              <div className="space-y-4">
+                {[
+                  { n:'1', text:'Sube tu CV en formato PDF o Word.', solid:true },
+                  { n:'2', text:<>Revisamos tu perfil en <span style={{color:'#C8874E',fontWeight:600}}>24 hrs</span>.</>, solid:false },
+                ].map(s => (
+                  <div key={s.n} className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0"
+                      style={s.solid
+                        ? { background:'linear-gradient(135deg,#C8874E,#E9C46A)', color:'white' }
+                        : { background:'transparent', border:'1px solid rgba(200,135,78,0.35)', color:'#C8874E' }}>
+                      {s.n}
+                    </div>
+                    <p className="text-sm" style={{ color:'rgba(245,240,232,0.65)' }}>{s.text}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
-
-          {/* --- COLUMNA DERECHA --- */}
-          {/* CAMBIO 4: Fondo oscuro sólido para el formulario */}
-          <div className="md:col-span-5 bg-[#13161C] p-8 md:p-12 flex flex-col justify-center relative border-l border-white/5">
-            {/* Decoración esquina */}
-            <div className="absolute top-0 right-0 w-24 h-24 bg-[#2A9D8F]/5 rounded-bl-[4rem] pointer-events-none" />
-
-            <div className="space-y-6 relative z-10">
-              
-              <div className="text-center mb-2">
-                 <h3 className="text-lg font-bold text-white">Sube tu currículum</h3>
-                 <p className="text-xs text-gray-500">Únete al equipo</p>
-              </div>
-
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileChange} 
-                accept=".pdf,.doc,.docx" 
-                className="hidden" 
-              />
-
-              {/* Zona de Carga: Borders claros y efectos glow */}
-              <div 
-                onClick={triggerFileInput}
-                className={`
-                  relative border-[2px] border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 group
-                  ${file 
-                    ? 'border-[#2A9D8F] bg-[#2A9D8F]/10' 
-                    : 'border-white/10 hover:border-[#2A9D8F] hover:bg-[#2A9D8F]/5'
-                  }
-                `}
-              >
-                {file ? (
-                  <div className="flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300">
-                    <div className="w-12 h-12 rounded-full bg-[#2A9D8F]/20 flex items-center justify-center text-[#2A9D8F] mb-2 shadow-lg shadow-[#2A9D8F]/10">
-                        <FileText className="w-6 h-6" />
-                    </div>
-                    <span className="font-bold text-white text-sm truncate max-w-[180px]">
-                        {file.name}
-                    </span>
-                    <span className="text-xs text-[#2A9D8F] font-semibold mt-1">¡Listo para enviar!</span>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-3">
-                    {/* Icono Upload */}
-                    <div className="w-14 h-14 bg-[#1c212c] border-2 border-white/5 rounded-full flex items-center justify-center text-[#2A9D8F] group-hover:scale-110 group-hover:border-[#2A9D8F] group-hover:text-white group-hover:bg-[#2A9D8F] transition-all duration-300 shadow-sm">
-                      <Upload className="w-6 h-6" />
-                    </div>
-                    <span className="text-sm font-semibold text-gray-400 group-hover:text-[#2A9D8F] transition-colors">Haz clic para explorar</span>
-                  </div>
-                )}
-              </div>
-
-              {/* BOTÓN: Cyan vibrante sobre oscuro */}
-              <Button 
-                className={`
-                    w-full h-12 rounded-xl font-bold tracking-wide shadow-lg transition-all flex items-center justify-center gap-2 group
-                    ${file 
-                        ? 'bg-[#2A9D8F] hover:bg-[#1B4F55] text-white shadow-[#2A9D8F]/30' 
-                        : 'bg-[#1c212c] text-gray-600 border border-white/5 cursor-not-allowed'
-                    }
-                `}
-                disabled={!file}
-              >
-                {file ? (
-                    <>Enviar Postulación <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform"/></>
-                ) : (
-                    'Selecciona un archivo'
-                )}
-              </Button>
+ 
+          {/* Columna derecha */}
+          <div className="md:col-span-5 p-8 md:p-12 flex flex-col justify-center">
+            <div className="text-center mb-6">
+              <h3 className="text-lg font-light" style={{ fontFamily:"'Playfair Display',serif", color:'#F5F0E8' }}>
+                Sube tu currículum
+              </h3>
+              <p className="text-xs mt-1 font-mono" style={{ color:'rgba(245,240,232,0.3)' }}>Únete al equipo</p>
             </div>
+ 
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".pdf,.doc,.docx" className="hidden" />
+ 
+            <div onClick={() => fileInputRef.current.click()}
+              className="group relative border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 mb-5"
+              style={{ borderWidth:'1.5px', borderStyle:'dashed',
+                borderColor: file ? '#C8874E' : 'rgba(245,240,232,0.12)',
+                background: file ? 'rgba(200,135,78,0.1)' : 'transparent' }}
+              onMouseEnter={e=>{ if(!file) e.currentTarget.style.borderColor='rgba(200,135,78,0.4)'; }}
+              onMouseLeave={e=>{ if(!file) e.currentTarget.style.borderColor='rgba(245,240,232,0.12)'; }}
+            >
+              {file ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center"
+                    style={{ background:'rgba(200,135,78,0.2)', border:'1px solid rgba(200,135,78,0.3)' }}>
+                    <FileText className="w-6 h-6" style={{ color:'#C8874E' }} />
+                  </div>
+                  <span className="font-medium text-sm truncate max-w-[180px]" style={{ color:'#F5F0E8' }}>{file.name}</span>
+                  <span className="text-xs font-mono" style={{ color:'#C8874E' }}>¡Listo para enviar!</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+                    style={{ background:'rgba(245,240,232,0.04)', border:'1px solid rgba(245,240,232,0.08)', color:'rgba(200,135,78,0.7)' }}>
+                    <Upload className="w-6 h-6" />
+                  </div>
+                  <span className="text-sm font-medium" style={{ color:'rgba(245,240,232,0.4)' }}>Haz clic para explorar</span>
+                </div>
+              )}
+            </div>
+ 
+            <button
+              disabled={!file}
+              className="w-full h-12 rounded-xl font-bold tracking-wide flex items-center justify-center gap-2 transition-all group/btn"
+              style={file
+                ? { background:'linear-gradient(135deg,#C8874E,#E9C46A)', color:'white', boxShadow:'0 0 20px rgba(200,135,78,0.25)' }
+                : { background:'rgba(245,240,232,0.04)', color:'rgba(245,240,232,0.2)', border:'1px solid rgba(245,240,232,0.06)', cursor:'not-allowed' }}
+            >
+              {file ? (
+                <><span>Enviar Postulación</span><ArrowRightN className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" /></>
+              ) : 'Selecciona un archivo'}
+            </button>
           </div>
-
         </div>
-      </motion.div>
+      </motionN.div>
     </section>
   );
 }

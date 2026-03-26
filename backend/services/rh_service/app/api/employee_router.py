@@ -30,8 +30,7 @@ def create_employee_with_user_route(
     """
     service = EmployeeService()
     try:
-        # Asumimos que tu servicio tiene este método. 
-        # Si no, te paso el código del servicio en el siguiente mensaje.
+       
         new_employee = service.create_employee_with_user(db=db, employee_data=payload)
         return new_employee
     except ValueError as e:
