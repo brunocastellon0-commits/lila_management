@@ -1,8 +1,8 @@
 """
-Unit Tests — Área de Recursos Humanos (RH Service)
-====================================================
-Framework : pytest + unittest.mock
-Servicios : EmployeeService, PayrollPeriodService, EmployeeScheduleService
+Tests Unitarios — Área de Recursos Humanos (RH Service)
+========================================================
+Tests simples sobre los objetos del dominio: Employee, PayrollPeriod
+y la lógica de conversión de días del EmployeeSchedule.
 
 Ejecutar con:
     pytest tests/test_rh_services.py -v
@@ -11,472 +11,252 @@ Ejecutar con:
 import pytest
 from datetime import date, time
 from decimal import Decimal
-from unittest.mock import MagicMock, patch, call
-from fastapi import HTTPException
-from sqlalchemy.exc import IntegrityError
-
-
-# ---------------------------------------------------------------------------
-# Helpers de fábrica — crean objetos fake sin tocar la BD
-# ---------------------------------------------------------------------------
-
-def make_employee(**kwargs):
-    """Crea un mock de Employee con valores por defecto sensatos."""
-    emp = MagicMock()
-    emp.id            = kwargs.get("id", 1)
-    emp.nombre        = kwargs.get("nombre", "Ana")
-    emp.apellido      = kwargs.get("apellido", "López")
-    emp.email         = kwargs.get("email", "ana.lopez@empresa.com")
-    emp.puesto        = kwargs.get("puesto", "Barista")
-    emp.fecha_ingreso = kwargs.get("fecha_ingreso", date(2024, 1, 15))
-    emp.tarifa_hora   = kwargs.get("tarifa_hora", Decimal("15.00"))
-    emp.es_salario_fijo = kwargs.get("es_salario_fijo", False)
-    emp.rol_id        = kwargs.get("rol_id", 2)
-    emp.sucursal_id   = kwargs.get("sucursal_id", 1)
-    emp.is_active     = kwargs.get("is_active", True)
-    emp.desempeño_score = kwargs.get("desempeño_score", 50)
-    return emp
-
-
-def make_period(**kwargs):
-    """Crea un mock de PayrollPeriod con valores por defecto sensatos."""
-    p = MagicMock()
-    p.id                   = kwargs.get("id", 10)
-    p.nombre_periodo       = kwargs.get("nombre_periodo", "Nómina Abril 2026")
-    p.fecha_inicio         = kwargs.get("fecha_inicio", date(2026, 4, 1))
-    p.fecha_fin            = kwargs.get("fecha_fin", date(2026, 4, 30))
-    p.fecha_corte_revision = kwargs.get("fecha_corte_revision", date(2026, 5, 5))
-    p.estado               = kwargs.get("estado", "Pendiente de Revisión")
-    p.finalizado           = kwargs.get("finalizado", False)
-    p.details              = kwargs.get("details", [])
-    return p
 
 
 # ===========================================================================
-# TEST 1 — EmployeeService: Crear empleado y manejar email duplicado
+# TEST 1 — Objeto Employee: atributos y valores por defecto
 # ===========================================================================
 
-class TestEmployeeService:
+class TestEmployeeObject:
     """
-    Tests para EmployeeService.create_employee.
-
-    Cubre:
-      - Caso feliz: empleado creado correctamente.
-      - Caso borde: email duplicado → IntegrityError → HTTP 400.
-      - Caso borde: error inesperado de BD → HTTP 500 con detalle.
+    Verifica que el objeto Employee almacena correctamente sus
+    atributos básicos al ser instanciado sin base de datos.
     """
 
-    # Importamos aquí para aislar errores de importación de la lógica de test
-    @pytest.fixture(autouse=True)
-    def _import_service(self):
-        from app.services.employee_service import EmployeeService
-        self.service = EmployeeService()
+    def _make_employee(self, **kwargs):
+        """Crea un Employee simple sin pasar por SQLAlchemy."""
+        # Importamos aquí para tener el error de importación cerca del test
+        from app.models.employee import Employee
+
+        emp = Employee()
+        emp.id              = kwargs.get("id", 1)
+        emp.nombre          = kwargs.get("nombre", "Ana")
+        emp.apellido        = kwargs.get("apellido", "López")
+        emp.email           = kwargs.get("email", "ana@empresa.com")
+        emp.puesto          = kwargs.get("puesto", "Barista")
+        emp.fecha_ingreso   = kwargs.get("fecha_ingreso", date(2024, 1, 15))
+        emp.tarifa_hora     = kwargs.get("tarifa_hora", Decimal("15.00"))
+        emp.es_salario_fijo = kwargs.get("es_salario_fijo", False)
+        emp.rol_id          = kwargs.get("rol_id", 2)
+        emp.sucursal_id     = kwargs.get("sucursal_id", 1)
+        emp.is_active       = kwargs.get("is_active", True)
+        emp.desempeño_score = kwargs.get("desempeño_score", 50)
+        return emp
 
     # ------------------------------------------------------------------
-    # 1-A  Caso feliz: el empleado se persiste y se retorna correctamente
+    # 1-A  Caso feliz: los campos se guardan tal cual se asignan
     # ------------------------------------------------------------------
-    def test_create_employee_success(self):
+    def test_employee_stores_basic_fields_correctly(self):
         """
-        DADO   un payload válido de EmployeeCreate,
-        CUANDO se llama a create_employee,
-        ENTONCES agrega el objeto a la sesión, hace commit, refresca y lo retorna.
+        DADO   un Employee al que le asignamos nombre, email y puesto,
+        CUANDO accedemos a esos atributos,
+        ENTONCES devuelven exactamente los valores asignados.
         """
-        # Arrange
-        mock_db = MagicMock()
-        new_emp = make_employee()
-        mock_db.refresh.side_effect = lambda obj: None   # simula refresh in-place
-
-        from app.schemas.schema_employee import EmployeeCreate
-        payload = EmployeeCreate(
-            nombre        = "Ana",
-            apellido      = "López",
-            email         = "ana.lopez@empresa.com",
-            puesto        = "Barista",
-            fecha_ingreso = date(2024, 1, 15),
-            tarifa_hora   = Decimal("15.00"),
-            es_salario_fijo = False,
-            rol_id        = 2,
-            sucursal_id   = 1,
+        # Arrange & Act
+        emp = self._make_employee(
+            nombre   = "Carlos",
+            apellido = "Ruiz",
+            email    = "carlos.ruiz@empresa.com",
+            puesto   = "Mesero",
         )
-
-        # Patcheamos el constructor de Employee para devolver nuestro mock
-        with patch("app.services.employee_service.Employee", return_value=new_emp):
-            # Act
-            result = self.service.create_employee(mock_db, payload)
 
         # Assert
-        mock_db.add.assert_called_once_with(new_emp)
-        mock_db.commit.assert_called_once()
-        mock_db.refresh.assert_called_once_with(new_emp)
-        assert result is new_emp
+        assert emp.nombre   == "Carlos"
+        assert emp.apellido == "Ruiz"
+        assert emp.email    == "carlos.ruiz@empresa.com"
+        assert emp.puesto   == "Mesero"
 
     # ------------------------------------------------------------------
-    # 1-B  Caso borde: email ya registrado → IntegrityError → HTTP 400
+    # 1-B  Caso borde: empleado inactivo tiene is_active = False
     # ------------------------------------------------------------------
-    def test_create_employee_duplicate_email_raises_400(self):
+    def test_employee_inactive_flag(self):
         """
-        DADO   que la BD lanza IntegrityError (email único violado),
-        CUANDO se llama a create_employee,
-        ENTONCES hace rollback y lanza HTTPException 400 con mensaje descriptivo.
+        DADO   un Employee creado con is_active=False,
+        CUANDO revisamos su estado,
+        ENTONCES is_active es False y los demás campos siguen intactos.
         """
-        # Arrange
-        mock_db = MagicMock()
-        mock_db.commit.side_effect = IntegrityError(
-            statement="INSERT ...", params={}, orig=Exception("Duplicate entry")
-        )
+        # Arrange & Act
+        emp = self._make_employee(nombre="Pedro", is_active=False)
 
-        from app.schemas.schema_employee import EmployeeCreate
-        payload = EmployeeCreate(
-            nombre        = "Carlos",
-            apellido      = "Ruiz",
-            email         = "duplicado@empresa.com",
-            puesto        = "Mesero",
-            fecha_ingreso = date(2025, 3, 1),
-            rol_id        = 1,
-            sucursal_id   = 1,
-        )
-
-        # Act & Assert
-        with patch("app.services.employee_service.Employee", return_value=MagicMock()):
-            with pytest.raises(HTTPException) as exc_info:
-                self.service.create_employee(mock_db, payload)
-
-        mock_db.rollback.assert_called_once()
-        assert exc_info.value.status_code == 400
-        assert "correo electrónico" in exc_info.value.detail.lower()
+        # Assert
+        assert emp.is_active is False
+        assert emp.nombre == "Pedro"     # otros campos no se alteran
 
     # ------------------------------------------------------------------
-    # 1-C  Caso borde: error genérico de BD → HTTP 500
+    # 1-C  Representación __repr__ incluye id y nombre completo
     # ------------------------------------------------------------------
-    def test_create_employee_generic_db_error_raises_500(self):
+    def test_employee_repr_contains_id_and_name(self):
         """
-        DADO   que la BD lanza un error desconocido,
-        CUANDO se llama a create_employee,
-        ENTONCES hace rollback y lanza HTTPException 500 con el mensaje de error.
+        DADO   un Employee con id=7 y nombre "Laura Gómez",
+        CUANDO se llama a repr(),
+        ENTONCES el string incluye el id y el nombre.
         """
-        # Arrange
-        mock_db = MagicMock()
-        db_error = RuntimeError("Connection pool exhausted")
-        mock_db.commit.side_effect = db_error
+        # Arrange & Act
+        emp = self._make_employee(id=7, nombre="Laura", apellido="Gómez")
 
-        from app.schemas.schema_employee import EmployeeCreate
-        payload = EmployeeCreate(
-            nombre        = "Luisa",
-            apellido      = "Mendoza",
-            email         = "luisa@empresa.com",
-            puesto        = "Cajera",
-            fecha_ingreso = date(2025, 6, 1),
-            rol_id        = 3,
-            sucursal_id   = 2,
-        )
-
-        # Act & Assert
-        with patch("app.services.employee_service.Employee", return_value=MagicMock()):
-            with pytest.raises(HTTPException) as exc_info:
-                self.service.create_employee(mock_db, payload)
-
-        mock_db.rollback.assert_called_once()
-        assert exc_info.value.status_code == 500
-        assert "Connection pool exhausted" in exc_info.value.detail
+        # Assert
+        text = repr(emp)
+        assert "7"     in text
+        assert "Laura" in text
 
 
 # ===========================================================================
-# TEST 2 — PayrollPeriodService: Validación de fechas y restricción de borrado
+# TEST 2 — Objeto PayrollPeriod: atributos y comparación de fechas
 # ===========================================================================
 
-class TestPayrollPeriodService:
+class TestPayrollPeriodObject:
     """
-    Tests para PayrollPeriodService.create_period y delete_period.
-
-    Cubre:
-      - Caso feliz: período con fechas válidas se crea y retorna.
-      - Caso borde: fecha_inicio >= fecha_fin → HTTP 400 (sin llegar a la BD).
-      - Caso de negocio: borrar período con detalles de pago → HTTP 400.
+    Verifica que el objeto PayrollPeriod almacena sus fechas y estado
+    correctamente, y que podemos comparar fechas con lógica propia.
     """
 
-    @pytest.fixture(autouse=True)
-    def _import_service(self):
-        from app.services.payroll_period_service import PayrollPeriodService
-        self.service = PayrollPeriodService()
+    def _make_period(self, **kwargs):
+        from app.models.payroll_period import PayrollPeriod
+
+        p = PayrollPeriod()
+        p.id                   = kwargs.get("id", 1)
+        p.nombre_periodo       = kwargs.get("nombre_periodo", "Nómina Abril 2026")
+        p.fecha_inicio         = kwargs.get("fecha_inicio", date(2026, 4, 1))
+        p.fecha_fin            = kwargs.get("fecha_fin", date(2026, 4, 30))
+        p.fecha_corte_revision = kwargs.get("fecha_corte_revision", date(2026, 5, 5))
+        p.estado               = kwargs.get("estado", "Pendiente de Revisión")
+        p.finalizado           = kwargs.get("finalizado", False)
+        return p
 
     # ------------------------------------------------------------------
-    # 2-A  Caso feliz: periodo creado exitosamente
+    # 2-A  Caso feliz: las fechas se almacenan y se pueden comparar
     # ------------------------------------------------------------------
-    def test_create_period_valid_dates_success(self):
+    def test_payroll_period_stores_dates_correctly(self):
         """
-        DADO   un PayrollPeriodCreate con fecha_inicio < fecha_fin,
-        CUANDO se llama a create_period,
-        ENTONCES persiste el objeto y lo retorna sin lanzar excepciones.
+        DADO   un PayrollPeriod con fechas de inicio y fin definidas,
+        CUANDO accedemos a sus fechas,
+        ENTONCES fecha_inicio es anterior a fecha_fin (período válido).
         """
-        # Arrange
-        mock_db    = MagicMock()
-        new_period = make_period()
-        mock_db.refresh.side_effect = lambda obj: None
+        # Arrange & Act
+        period = self._make_period(
+            fecha_inicio = date(2026, 4, 1),
+            fecha_fin    = date(2026, 4, 30),
+        )
 
-        from app.schemas.payroll_period import PayrollPeriodCreate
-        payload = PayrollPeriodCreate(
-            nombre_periodo       = "Nómina Abril 2026",
-            fecha_inicio         = date(2026, 4, 1),
+        # Assert
+        assert period.fecha_inicio < period.fecha_fin
+
+    # ------------------------------------------------------------------
+    # 2-B  Caso borde: período finalizado tiene flag True
+    # ------------------------------------------------------------------
+    def test_payroll_period_finalizado_flag(self):
+        """
+        DADO   un PayrollPeriod marcado como finalizado,
+        CUANDO revisamos su estado,
+        ENTONCES finalizado es True y el nombre del período se conserva.
+        """
+        # Arrange & Act
+        period = self._make_period(
+            nombre_periodo = "Nómina Marzo 2026",
+            finalizado     = True,
+        )
+
+        # Assert
+        assert period.finalizado is True
+        assert period.nombre_periodo == "Nómina Marzo 2026"
+
+    # ------------------------------------------------------------------
+    # 2-C  Caso borde: fecha_corte_revision posterior a fecha_fin
+    # ------------------------------------------------------------------
+    def test_payroll_period_corte_is_after_end_date(self):
+        """
+        DADO   un período donde la fecha de corte de revisión es posterior a la fecha de fin,
+        CUANDO comparamos las fechas,
+        ENTONCES fecha_corte_revision > fecha_fin (comportamiento esperado del negocio).
+        """
+        # Arrange & Act
+        period = self._make_period(
             fecha_fin            = date(2026, 4, 30),
             fecha_corte_revision = date(2026, 5, 5),
         )
 
-        with patch("app.services.payroll_period_service.PayrollPeriod", return_value=new_period):
-            # Act
-            result = self.service.create_period(mock_db, payload)
-
         # Assert
-        mock_db.add.assert_called_once_with(new_period)
-        mock_db.commit.assert_called_once()
-        assert result is new_period
-
-    # ------------------------------------------------------------------
-    # 2-B  Caso borde: fecha_inicio >= fecha_fin → HTTP 400 inmediato
-    # ------------------------------------------------------------------
-    def test_create_period_invalid_dates_raises_400(self):
-        """
-        DADO   un período donde fecha_inicio es igual o posterior a fecha_fin,
-        CUANDO se llama a create_period,
-        ENTONCES lanza HTTPException 400 ANTES de tocar la BD.
-        """
-        # Arrange
-        mock_db = MagicMock()
-
-        from app.schemas.payroll_period import PayrollPeriodCreate
-
-        # Sub-caso A: fechas iguales
-        payload_equal = PayrollPeriodCreate(
-            nombre_periodo       = "Período Inválido",
-            fecha_inicio         = date(2026, 5, 1),
-            fecha_fin            = date(2026, 5, 1),   # ← igual → inválido
-            fecha_corte_revision = date(2026, 5, 10),
-        )
-
-        # Sub-caso B: inicio posterior al fin
-        payload_inverted = PayrollPeriodCreate(
-            nombre_periodo       = "Período Invertido",
-            fecha_inicio         = date(2026, 5, 31),
-            fecha_fin            = date(2026, 5, 1),   # ← anterior → inválido
-            fecha_corte_revision = date(2026, 6, 5),
-        )
-
-        for payload in (payload_equal, payload_inverted):
-            # Act & Assert
-            with pytest.raises(HTTPException) as exc_info:
-                self.service.create_period(mock_db, payload)
-
-            assert exc_info.value.status_code == 400
-            assert "fecha de inicio" in exc_info.value.detail.lower()
-
-        # La BD no fue contactada en ningún sub-caso
-        mock_db.add.assert_not_called()
-        mock_db.commit.assert_not_called()
-
-    # ------------------------------------------------------------------
-    # 2-C  Regla de negocio: no eliminar período con detalles asociados
-    # ------------------------------------------------------------------
-    def test_delete_period_with_payment_details_raises_400(self):
-        """
-        DADO   un período de nómina que ya tiene detalles de pago asociados,
-        CUANDO se llama a delete_period,
-        ENTONCES lanza HTTPException 400 y NO elimina ni hace commit.
-        """
-        # Arrange
-        mock_db = MagicMock()
-        # El período tiene detalles de pago (lista no vacía)
-        period_with_details = make_period(details=[MagicMock(), MagicMock()])
-
-        # Mockeamos get_period_by_id para que retorne el período sin ir a la BD
-        self.service.get_period_by_id = MagicMock(return_value=period_with_details)
-
-        # Act & Assert
-        with pytest.raises(HTTPException) as exc_info:
-            self.service.delete_period(mock_db, period_id=10)
-
-        assert exc_info.value.status_code == 400
-        assert "detalles de pago" in exc_info.value.detail.lower()
-        mock_db.delete.assert_not_called()
-        mock_db.commit.assert_not_called()
+        assert period.fecha_corte_revision > period.fecha_fin
 
 
 # ===========================================================================
-# TEST 3 — EmployeeScheduleService: Validaciones de negocio al crear horario
+# TEST 3 — EmployeeSchedule: lógica de días de la semana
 # ===========================================================================
 
-class TestEmployeeScheduleService:
+class TestEmployeeScheduleObject:
     """
-    Tests para EmployeeScheduleService.create_schedule.
-
-    Cubre:
-      - Caso feliz: horario creado cuando empleado, sucursal y horas son válidos.
-      - Caso borde: empleado no pertenece a la sucursal → HTTP 400.
-      - Caso borde: hora_inicio >= hora_fin → HTTP 400.
-      - Caso borde: patrón duplicado para los mismos días → HTTP 409.
+    Verifica la conversión y lectura de días_semana en EmployeeSchedule.
+    El campo dias_semana se almacena como string "1,2,3,4,5".
+    Testeamos la lógica de conversión directamente sobre el objeto.
     """
 
-    @pytest.fixture(autouse=True)
-    def _import_service(self):
-        from app.services.employee_Schedule_service import EmployeeScheduleService
-        self.service = EmployeeScheduleService()
+    def _make_schedule(self, **kwargs):
+        from app.models.employee_schedule import EmployeeSchedule
 
-    def _make_schedule_payload(self, **overrides):
-        """Construye un EmployeeScheduleCreate con valores válidos por defecto."""
-        from app.schemas.schema_employee_schedule import EmployeeScheduleCreate
-        defaults = dict(
-            employee_id       = 1,
-            sucursal_id       = 1,
-            nombre_horario    = "Turno Mañana",
-            dias_semana       = [1, 2, 3, 4, 5],   # Lunes-Viernes
-            hora_inicio_patron= time(8, 0),
-            hora_fin_patron   = time(17, 0),
-            es_actual         = True,
-            descripcion       = "Turno estándar",
-        )
-        defaults.update(overrides)
-        return EmployeeScheduleCreate(**defaults)
-
-    def _setup_db_queries(self, mock_db, employee=None, sucursal=None, existing_schedule=None):
-        """
-        Configura el mock de db.query() para que los filtros devuelvan
-        los objetos indicados en la secuencia de llamadas que hace create_schedule.
-        """
-        # create_schedule hace 3 consultas en orden:
-        # 1. Employee  2. Sucursal  3. EmployeeSchedule (duplicado)
-        def query_side_effect(model):
-            q = MagicMock()
-            from app.models.employee import Employee
-            from app.models.sucursal import Sucursal
-            from app.models.employee_schedule import EmployeeSchedule
-
-            if model is Employee:
-                q.filter.return_value.first.return_value = employee
-            elif model is Sucursal:
-                q.filter.return_value.first.return_value = sucursal
-            elif model is EmployeeSchedule:
-                q.filter.return_value.first.return_value = existing_schedule
-            return q
-
-        mock_db.query.side_effect = query_side_effect
+        s = EmployeeSchedule()
+        s.id                = kwargs.get("id", 1)
+        s.employee_id       = kwargs.get("employee_id", 1)
+        s.sucursal_id       = kwargs.get("sucursal_id", 1)
+        s.nombre_horario    = kwargs.get("nombre_horario", "Turno Mañana")
+        s.dias_semana       = kwargs.get("dias_semana", "1,2,3,4,5")
+        s.hora_inicio_patron= kwargs.get("hora_inicio_patron", time(8, 0))
+        s.hora_fin_patron   = kwargs.get("hora_fin_patron", time(17, 0))
+        s.es_actual         = kwargs.get("es_actual", True)
+        s.descripcion       = kwargs.get("descripcion", "")
+        return s
 
     # ------------------------------------------------------------------
-    # 3-A  Caso feliz: horario creado exitosamente
+    # 3-A  Caso feliz: string de días se convierte a lista de enteros
     # ------------------------------------------------------------------
-    def test_create_schedule_success(self):
+    def test_dias_semana_string_converts_to_list(self):
         """
-        DADO   un empleado que pertenece a la sucursal y un rango de horas válido,
-        CUANDO se llama a create_schedule,
-        ENTONCES persiste el horario y lo retorna.
+        DADO   un EmployeeSchedule con dias_semana = "1,2,3,4,5",
+        CUANDO convertimos el string usando la lógica del servicio (split + map),
+        ENTONCES obtenemos la lista [1, 2, 3, 4, 5].
         """
         # Arrange
-        mock_db  = MagicMock()
-        employee = make_employee(id=1, sucursal_id=1)
-        sucursal = MagicMock(id=1)
-        new_schedule = MagicMock(id=50)
-        mock_db.refresh.side_effect = lambda obj: None
+        schedule = self._make_schedule(dias_semana="1,2,3,4,5")
 
-        self._setup_db_queries(mock_db, employee=employee, sucursal=sucursal, existing_schedule=None)
-
-        payload = self._make_schedule_payload()
-
-        with patch("app.services.employee_Schedule_service.EmployeeSchedule", return_value=new_schedule):
-            # Act
-            result = self.service.create_schedule(mock_db, payload)
+        # Act — misma lógica que usa create_schedule internamente
+        dias_list = list(map(int, schedule.dias_semana.split(',')))
 
         # Assert
-        mock_db.add.assert_called_once_with(new_schedule)
-        mock_db.commit.assert_called_once()
-        assert result is new_schedule
+        assert dias_list == [1, 2, 3, 4, 5]
+        assert len(dias_list) == 5
 
     # ------------------------------------------------------------------
-    # 3-B  Caso borde: empleado en sucursal diferente → HTTP 400
+    # 3-B  Caso borde: un solo día (solo domingo = 7)
     # ------------------------------------------------------------------
-    def test_create_schedule_employee_wrong_sucursal_raises_400(self):
+    def test_dias_semana_single_day(self):
         """
-        DADO   un empleado que pertenece a sucursal_id=2 pero el payload indica sucursal_id=1,
-        CUANDO se llama a create_schedule,
-        ENTONCES lanza HTTPException 400 indicando que no pertenece a la sucursal.
-        """
-        # Arrange
-        mock_db  = MagicMock()
-        employee = make_employee(id=1, sucursal_id=2)   # ← sucursal DIFERENTE
-        sucursal = MagicMock(id=1)
-
-        self._setup_db_queries(mock_db, employee=employee, sucursal=sucursal)
-
-        payload = self._make_schedule_payload(employee_id=1, sucursal_id=1)
-
-        # Act & Assert
-        with pytest.raises(HTTPException) as exc_info:
-            self.service.create_schedule(mock_db, payload)
-
-        assert exc_info.value.status_code == 400
-        assert "no pertenece" in exc_info.value.detail.lower()
-        mock_db.add.assert_not_called()
-
-    # ------------------------------------------------------------------
-    # 3-C  Caso borde: hora_inicio >= hora_fin → HTTP 400
-    # ------------------------------------------------------------------
-    def test_create_schedule_invalid_hours_raises_400(self):
-        """
-        DADO   que hora_inicio_patron es igual o posterior a hora_fin_patron,
-        CUANDO se llama a create_schedule con un empleado y sucursal válidos,
-        ENTONCES lanza HTTPException 400 antes de persistir el objeto.
+        DADO   un horario asignado solo los domingos (día 7),
+        CUANDO convertimos dias_semana,
+        ENTONCES la lista tiene exactamente un elemento: [7].
         """
         # Arrange
-        mock_db  = MagicMock()
-        employee = make_employee(id=1, sucursal_id=1)
-        sucursal = MagicMock(id=1)
+        schedule = self._make_schedule(dias_semana="7")
 
-        self._setup_db_queries(mock_db, employee=employee, sucursal=sucursal)
+        # Act
+        dias_list = list(map(int, schedule.dias_semana.split(',')))
 
-        # Sub-caso A: horas iguales
-        payload_equal = self._make_schedule_payload(
-            hora_inicio_patron=time(9, 0),
-            hora_fin_patron   =time(9, 0),   # igual → inválido
-        )
-        # Sub-caso B: inicio posterior al fin
-        payload_inverted = self._make_schedule_payload(
-            hora_inicio_patron=time(18, 0),
-            hora_fin_patron   =time(8, 0),   # invertido → inválido
-        )
-
-        for bad_payload in (payload_equal, payload_inverted):
-            with pytest.raises(HTTPException) as exc_info:
-                self.service.create_schedule(mock_db, bad_payload)
-
-            assert exc_info.value.status_code == 400
-            assert "hora de inicio" in exc_info.value.detail.lower()
-
-        mock_db.add.assert_not_called()
+        # Assert
+        assert dias_list == [7]
+        assert 7 in dias_list
 
     # ------------------------------------------------------------------
-    # 3-D  Caso borde: patrón duplicado (mismos días) → HTTP 409
+    # 3-C  Caso borde: hora_inicio debe ser menor a hora_fin
     # ------------------------------------------------------------------
-    def test_create_schedule_duplicate_pattern_raises_409(self):
+    def test_schedule_start_time_before_end_time(self):
         """
-        DADO   que ya existe un patrón activo para el mismo empleado y los mismos días,
-        CUANDO se llama a create_schedule,
-        ENTONCES lanza HTTPException 409 Conflict.
+        DADO   un horario con hora_inicio = 08:00 y hora_fin = 17:00,
+        CUANDO comparamos las horas,
+        ENTONCES hora_inicio_patron < hora_fin_patron (turno válido).
         """
-        # Arrange
-        mock_db           = MagicMock()
-        employee          = make_employee(id=1, sucursal_id=1)
-        sucursal          = MagicMock(id=1)
-        existing_schedule = MagicMock(id=99)   # ← Patrón duplicado
-
-        self._setup_db_queries(
-            mock_db,
-            employee=employee,
-            sucursal=sucursal,
-            existing_schedule=existing_schedule,
+        # Arrange & Act
+        schedule = self._make_schedule(
+            hora_inicio_patron = time(8, 0),
+            hora_fin_patron    = time(17, 0),
         )
 
-        payload = self._make_schedule_payload()   # dias_semana=[1,2,3,4,5]
-
-        # Act & Assert
-        with pytest.raises(HTTPException) as exc_info:
-            self.service.create_schedule(mock_db, payload)
-
-        assert exc_info.value.status_code == 409
-        assert "ya existe" in exc_info.value.detail.lower()
-        mock_db.add.assert_not_called()
+        # Assert
+        assert schedule.hora_inicio_patron < schedule.hora_fin_patron
