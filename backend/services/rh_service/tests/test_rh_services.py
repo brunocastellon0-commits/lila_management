@@ -1,262 +1,143 @@
-"""
-Tests Unitarios — Área de Recursos Humanos (RH Service)
-========================================================
-Tests simples sobre los objetos del dominio: Employee, PayrollPeriod
-y la lógica de conversión de días del EmployeeSchedule.
-
-Ejecutar con:
-    pytest tests/test_rh_services.py -v
-"""
-
-import pytest
-from datetime import date, time
+from datetime import datetime
 from decimal import Decimal
 
+class TestRoleCreation:
+    """Verifica que el objeto Role almacena sus atributos correctamente."""
 
-# ===========================================================================
-# TEST 1 — Objeto Employee: atributos y valores por defecto
-# ===========================================================================
+    def _make_role(self, **kwargs):
+        from app.models.role import Role
+        r = Role()
+        r.id          = kwargs.get("id", 1)
+        r.rol         = kwargs.get("rol", "Barista")
+        r.descripcion = kwargs.get("descripcion", "Prepara bebidas de cafe")
+        return r
 
-class TestEmployeeObject:
-    """
-    Verifica que el objeto Employee almacena correctamente sus
-    atributos básicos al ser instanciado sin base de datos.
-    """
+    def test_role_stores_fields_correctly(self):
+        print("\n[ARRANGE] Creando objeto Role con id=3, rol='Gerente'")
+        role = self._make_role(id=3, rol="Gerente", descripcion="Responsable del local")
+        print(f"[ACT]     Objeto creado -> {repr(role)}")
 
-    def _make_employee(self, **kwargs):
-        """Crea un Employee simple sin pasar por SQLAlchemy."""
-        # Importamos aquí para tener el error de importación cerca del test
-        from app.models.employee import Employee
+        print("[ASSERT]  Verificando role.id == 3")
+        assert role.id == 3
+        print("[ASSERT]  Verificando role.rol == 'Gerente'")
+        assert role.rol == "Gerente"
+        print("[ASSERT]  Verificando role.descripcion")
+        assert role.descripcion == "Responsable del local"
+        print("[OK]      Todos los campos coinciden")
 
-        emp = Employee()
-        emp.id              = kwargs.get("id", 1)
-        emp.nombre          = kwargs.get("nombre", "Ana")
-        emp.apellido        = kwargs.get("apellido", "López")
-        emp.email           = kwargs.get("email", "ana@empresa.com")
-        emp.puesto          = kwargs.get("puesto", "Barista")
-        emp.fecha_ingreso   = kwargs.get("fecha_ingreso", date(2024, 1, 15))
-        emp.tarifa_hora     = kwargs.get("tarifa_hora", Decimal("15.00"))
-        emp.es_salario_fijo = kwargs.get("es_salario_fijo", False)
-        emp.rol_id          = kwargs.get("rol_id", 2)
-        emp.sucursal_id     = kwargs.get("sucursal_id", 1)
-        emp.is_active       = kwargs.get("is_active", True)
-        emp.desempeño_score = kwargs.get("desempeño_score", 50)
-        return emp
+    def test_role_repr_contains_id_and_name(self):
+        print("\n[ARRANGE] Creando Role con id=5, rol='Cajero'")
+        role = self._make_role(id=5, rol="Cajero")
+        text = repr(role)
+        print(f"[ACT]     repr(role) -> '{text}'")
 
-    # ------------------------------------------------------------------
-    # 1-A  Caso feliz: los campos se guardan tal cual se asignan
-    # ------------------------------------------------------------------
-    def test_employee_stores_basic_fields_correctly(self):
-        """
-        DADO   un Employee al que le asignamos nombre, email y puesto,
-        CUANDO accedemos a esos atributos,
-        ENTONCES devuelven exactamente los valores asignados.
-        """
-        # Arrange & Act
-        emp = self._make_employee(
-            nombre   = "Carlos",
-            apellido = "Ruiz",
-            email    = "carlos.ruiz@empresa.com",
-            puesto   = "Mesero",
-        )
-
-        # Assert
-        assert emp.nombre   == "Carlos"
-        assert emp.apellido == "Ruiz"
-        assert emp.email    == "carlos.ruiz@empresa.com"
-        assert emp.puesto   == "Mesero"
-
-    # ------------------------------------------------------------------
-    # 1-B  Caso borde: empleado inactivo tiene is_active = False
-    # ------------------------------------------------------------------
-    def test_employee_inactive_flag(self):
-        """
-        DADO   un Employee creado con is_active=False,
-        CUANDO revisamos su estado,
-        ENTONCES is_active es False y los demás campos siguen intactos.
-        """
-        # Arrange & Act
-        emp = self._make_employee(nombre="Pedro", is_active=False)
-
-        # Assert
-        assert emp.is_active is False
-        assert emp.nombre == "Pedro"     # otros campos no se alteran
-
-    # ------------------------------------------------------------------
-    # 1-C  Representación __repr__ incluye id y nombre completo
-    # ------------------------------------------------------------------
-    def test_employee_repr_contains_id_and_name(self):
-        """
-        DADO   un Employee con id=7 y nombre "Laura Gómez",
-        CUANDO se llama a repr(),
-        ENTONCES el string incluye el id y el nombre.
-        """
-        # Arrange & Act
-        emp = self._make_employee(id=7, nombre="Laura", apellido="Gómez")
-
-        # Assert
-        text = repr(emp)
-        assert "7"     in text
-        assert "Laura" in text
+        print("[ASSERT]  Verificando que '5' esta en el repr")
+        assert "5" in text
+        print("[ASSERT]  Verificando que 'Cajero' esta en el repr")
+        assert "Cajero" in text
+        print("[OK]      repr contiene id y nombre")
 
 
-# ===========================================================================
-# TEST 2 — Objeto PayrollPeriod: atributos y comparación de fechas
-# ===========================================================================
+class TestPostulanteCreation:
+    """Verifica que el objeto postulante almacena sus datos correctamente."""
 
-class TestPayrollPeriodObject:
-    """
-    Verifica que el objeto PayrollPeriod almacena sus fechas y estado
-    correctamente, y que podemos comparar fechas con lógica propia.
-    """
-
-    def _make_period(self, **kwargs):
-        from app.models.payroll_period import PayrollPeriod
-
-        p = PayrollPeriod()
+    def _make_postulante(self, **kwargs):
+        from app.models.postulante import postulante
+        p = postulante()
         p.id                   = kwargs.get("id", 1)
-        p.nombre_periodo       = kwargs.get("nombre_periodo", "Nómina Abril 2026")
-        p.fecha_inicio         = kwargs.get("fecha_inicio", date(2026, 4, 1))
-        p.fecha_fin            = kwargs.get("fecha_fin", date(2026, 4, 30))
-        p.fecha_corte_revision = kwargs.get("fecha_corte_revision", date(2026, 5, 5))
-        p.estado               = kwargs.get("estado", "Pendiente de Revisión")
-        p.finalizado           = kwargs.get("finalizado", False)
+        p.nombre               = kwargs.get("nombre", "Sofia Martinez")
+        p.telefono             = kwargs.get("telefono", "+502 5555-1234")
+        p.correo               = kwargs.get("correo", "sofia@email.com")
+        p.ruta_cv              = kwargs.get("ruta_cv", "/cvs/sofia.pdf")
+        p.rol_id               = kwargs.get("rol_id", 2)
+        p.match_score          = kwargs.get("match_score", None)
+        p.analisis_ia          = kwargs.get("analisis_ia", None)
+        p.es_apto              = kwargs.get("es_apto", False)
+        p.fecha_postulacion    = kwargs.get("fecha_postulacion", datetime(2026, 4, 20))
+        p.estado_entrevista    = kwargs.get("estado_entrevista", "pendiente")
+        p.fecha_entrevista     = kwargs.get("fecha_entrevista", None)
+        p.modalidad_entrevista = kwargs.get("modalidad_entrevista", None)
+        p.notas_entrevista     = kwargs.get("notas_entrevista", None)
         return p
 
-    # ------------------------------------------------------------------
-    # 2-A  Caso feliz: las fechas se almacenan y se pueden comparar
-    # ------------------------------------------------------------------
-    def test_payroll_period_stores_dates_correctly(self):
-        """
-        DADO   un PayrollPeriod con fechas de inicio y fin definidas,
-        CUANDO accedemos a sus fechas,
-        ENTONCES fecha_inicio es anterior a fecha_fin (período válido).
-        """
-        # Arrange & Act
-        period = self._make_period(
-            fecha_inicio = date(2026, 4, 1),
-            fecha_fin    = date(2026, 4, 30),
+    def test_postulante_stores_contact_fields_correctly(self):
+        print("\n[ARRANGE] Creando postulante Luis Herrera para rol_id=1")
+        p = self._make_postulante(
+            nombre   = "Luis Herrera",
+            correo   = "luis.h@email.com",
+            telefono = "+502 5999-4321",
+            rol_id   = 1,
         )
+        print(f"[ACT]     Objeto creado -> nombre='{p.nombre}', correo='{p.correo}'")
 
-        # Assert
-        assert period.fecha_inicio < period.fecha_fin
+        print("[ASSERT]  Verificando campos de contacto")
+        assert p.nombre   == "Luis Herrera"
+        assert p.correo   == "luis.h@email.com"
+        assert p.telefono == "+502 5999-4321"
+        assert p.rol_id   == 1
+        print("[OK]      Datos de contacto correctos")
 
-    # ------------------------------------------------------------------
-    # 2-B  Caso borde: período finalizado tiene flag True
-    # ------------------------------------------------------------------
-    def test_payroll_period_finalizado_flag(self):
-        """
-        DADO   un PayrollPeriod marcado como finalizado,
-        CUANDO revisamos su estado,
-        ENTONCES finalizado es True y el nombre del período se conserva.
-        """
-        # Arrange & Act
-        period = self._make_period(
-            nombre_periodo = "Nómina Marzo 2026",
-            finalizado     = True,
+    def test_postulante_default_status_on_creation(self):
+        print("\n[ARRANGE] Creando postulante con valores por defecto")
+        p = self._make_postulante()
+        print(f"[ACT]     es_apto={p.es_apto}, estado='{p.estado_entrevista}', match_score={p.match_score}")
+
+        print("[ASSERT]  es_apto debe ser False")
+        assert p.es_apto is False
+        print("[ASSERT]  estado_entrevista debe ser 'pendiente'")
+        assert p.estado_entrevista == "pendiente"
+        print("[ASSERT]  match_score debe ser None")
+        assert p.match_score is None
+        print("[OK]      Estado inicial correcto")
+
+
+class TestPayComponentCreation:
+    """Verifica que el objeto PayComponent almacena su tipo y monto correctamente."""
+
+    def _make_pay_component(self, **kwargs):
+        from app.models.pay_component import PayComponent
+        pc = PayComponent()
+        pc.id                = kwargs.get("id", 1)
+        pc.payment_detail_id = kwargs.get("payment_detail_id", 10)
+        pc.tipo              = kwargs.get("tipo", "Salario Base")
+        pc.descripcion       = kwargs.get("descripcion", "Pago fijo mensual")
+        pc.monto             = kwargs.get("monto", Decimal("3500.00"))
+        return pc
+
+    def test_pay_component_stores_fields_correctly(self):
+        print("\n[ARRANGE] Creando PayComponent tipo='Bono', monto=500.00")
+        pc = self._make_pay_component(
+            tipo        = "Bono",
+            descripcion = "Bono por desempeno Q1",
+            monto       = Decimal("500.00"),
         )
+        print(f"[ACT]     Objeto creado -> tipo='{pc.tipo}', monto={pc.monto}")
 
-        # Assert
-        assert period.finalizado is True
-        assert period.nombre_periodo == "Nómina Marzo 2026"
+        print("[ASSERT]  Verificando tipo, descripcion y monto")
+        assert pc.tipo        == "Bono"
+        assert pc.descripcion == "Bono por desempeno Q1"
+        assert pc.monto       == Decimal("500.00")
+        print("[OK]      Campos de componente de pago correctos")
 
-    # ------------------------------------------------------------------
-    # 2-C  Caso borde: fecha_corte_revision posterior a fecha_fin
-    # ------------------------------------------------------------------
-    def test_payroll_period_corte_is_after_end_date(self):
-        """
-        DADO   un período donde la fecha de corte de revisión es posterior a la fecha de fin,
-        CUANDO comparamos las fechas,
-        ENTONCES fecha_corte_revision > fecha_fin (comportamiento esperado del negocio).
-        """
-        # Arrange & Act
-        period = self._make_period(
-            fecha_fin            = date(2026, 4, 30),
-            fecha_corte_revision = date(2026, 5, 5),
-        )
+    def test_pay_component_negative_monto_represents_discount(self):
+        print("\n[ARRANGE] Creando PayComponent tipo='Descuento', monto=-150.00")
+        pc = self._make_pay_component(tipo="Descuento", monto=Decimal("-150.00"))
+        print(f"[ACT]     monto={pc.monto} - esperamos valor negativo")
 
-        # Assert
-        assert period.fecha_corte_revision > period.fecha_fin
+        print("[ASSERT]  monto debe ser -150.00 y menor a 0")
+        assert pc.tipo  == "Descuento"
+        assert pc.monto == Decimal("-150.00")
+        assert pc.monto  < Decimal("0")
+        print("[OK]      Descuento representado con monto negativo")
 
+    def test_pay_component_repr_contains_key_info(self):
+        print("\n[ARRANGE] Creando PayComponent id=99, tipo='Horas Extra', monto=200.00")
+        pc = self._make_pay_component(id=99, tipo="Horas Extra", monto=Decimal("200.00"))
+        text = repr(pc)
+        print(f"[ACT]     repr(pc) -> '{text}'")
 
-# ===========================================================================
-# TEST 3 — EmployeeSchedule: lógica de días de la semana
-# ===========================================================================
-
-class TestEmployeeScheduleObject:
-    """
-    Verifica la conversión y lectura de días_semana en EmployeeSchedule.
-    El campo dias_semana se almacena como string "1,2,3,4,5".
-    Testeamos la lógica de conversión directamente sobre el objeto.
-    """
-
-    def _make_schedule(self, **kwargs):
-        from app.models.employee_schedule import EmployeeSchedule
-
-        s = EmployeeSchedule()
-        s.id                = kwargs.get("id", 1)
-        s.employee_id       = kwargs.get("employee_id", 1)
-        s.sucursal_id       = kwargs.get("sucursal_id", 1)
-        s.nombre_horario    = kwargs.get("nombre_horario", "Turno Mañana")
-        s.dias_semana       = kwargs.get("dias_semana", "1,2,3,4,5")
-        s.hora_inicio_patron= kwargs.get("hora_inicio_patron", time(8, 0))
-        s.hora_fin_patron   = kwargs.get("hora_fin_patron", time(17, 0))
-        s.es_actual         = kwargs.get("es_actual", True)
-        s.descripcion       = kwargs.get("descripcion", "")
-        return s
-
-    # ------------------------------------------------------------------
-    # 3-A  Caso feliz: string de días se convierte a lista de enteros
-    # ------------------------------------------------------------------
-    def test_dias_semana_string_converts_to_list(self):
-        """
-        DADO   un EmployeeSchedule con dias_semana = "1,2,3,4,5",
-        CUANDO convertimos el string usando la lógica del servicio (split + map),
-        ENTONCES obtenemos la lista [1, 2, 3, 4, 5].
-        """
-        # Arrange
-        schedule = self._make_schedule(dias_semana="1,2,3,4,5")
-
-        # Act — misma lógica que usa create_schedule internamente
-        dias_list = list(map(int, schedule.dias_semana.split(',')))
-
-        # Assert
-        assert dias_list == [1, 2, 3, 4, 5]
-        assert len(dias_list) == 5
-
-    # ------------------------------------------------------------------
-    # 3-B  Caso borde: un solo día (solo domingo = 7)
-    # ------------------------------------------------------------------
-    def test_dias_semana_single_day(self):
-        """
-        DADO   un horario asignado solo los domingos (día 7),
-        CUANDO convertimos dias_semana,
-        ENTONCES la lista tiene exactamente un elemento: [7].
-        """
-        # Arrange
-        schedule = self._make_schedule(dias_semana="7")
-
-        # Act
-        dias_list = list(map(int, schedule.dias_semana.split(',')))
-
-        # Assert
-        assert dias_list == [7]
-        assert 7 in dias_list
-
-    # ------------------------------------------------------------------
-    # 3-C  Caso borde: hora_inicio debe ser menor a hora_fin
-    # ------------------------------------------------------------------
-    def test_schedule_start_time_before_end_time(self):
-        """
-        DADO   un horario con hora_inicio = 08:00 y hora_fin = 17:00,
-        CUANDO comparamos las horas,
-        ENTONCES hora_inicio_patron < hora_fin_patron (turno válido).
-        """
-        # Arrange & Act
-        schedule = self._make_schedule(
-            hora_inicio_patron = time(8, 0),
-            hora_fin_patron    = time(17, 0),
-        )
-
-        # Assert
-        assert schedule.hora_inicio_patron < schedule.hora_fin_patron
+        print("[ASSERT]  Verificando que repr contiene '99', 'Horas Extra' y '200'")
+        assert "99"          in text
+        assert "Horas Extra" in text
+        assert "200"         in text
+        print("[OK]      repr contiene informacion clave")
