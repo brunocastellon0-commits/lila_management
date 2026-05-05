@@ -1,0 +1,5 @@
+# Este directorio contiene los scripts de migración de Alembic
+# para el Production Service (lila_produccion).
+#
+# Cada archivo en este directorio es una revisión/migración generada
+# con: alembic revision --autogenerate -m "descripcion"

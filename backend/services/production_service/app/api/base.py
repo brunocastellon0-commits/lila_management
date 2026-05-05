@@ -20,7 +20,7 @@ api_router = APIRouter()
 api_router.include_router(
     product_api.router, 
     tags=["Productos"], 
-    prefix="/productos"
+    prefix="/products"
 )
 
 # 2. Gestión de Recetas (Fichas Técnicas)

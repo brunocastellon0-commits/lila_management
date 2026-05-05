@@ -15,6 +15,12 @@ import Rh from './pages/rh.jsx';
 import Welcome from './pages/welcome.jsx';
 import DashboardHome from './pages/pagina_principal.jsx';
 import Produccion from './pages/Produccion.jsx';
+import Servicio from './pages/Servicio.jsx';
+import { Layout as ServicioLayout } from './assets/components/servicio/Layout.jsx';
+import { Dashboard as ServicioDashboard } from './assets/components/servicio/Dashboard.jsx';
+import { KitchenMonitor } from './assets/components/servicio/ServicioKitchenMonitor.jsx';
+import { Inventory as ServicioInventory } from './assets/components/servicio/ServicioInventory.jsx';
+import { OrdersHistory as ServicioOrders } from './assets/components/servicio/ServicioOrderHistory.jsx';
 
 function App() {
   return (
@@ -52,6 +58,20 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        <Route 
+          path="/servicio" 
+          element={
+            <ProtectedRoute>
+              <ServicioLayout />
+            </ProtectedRoute>
+          } 
+        >
+          <Route index element={<ServicioDashboard />} />
+          <Route path="salon" element={<Servicio />} />
+          <Route path="cocina" element={<KitchenMonitor />} />
+          <Route path="inventario" element={<ServicioInventory />} />
+          <Route path="pedidos" element={<ServicioOrders />} />
+        </Route>
 
         {/* Ruta catch-all: redirige a welcome */}
         <Route path="*" element={<Navigate to="/welcome" replace />} />

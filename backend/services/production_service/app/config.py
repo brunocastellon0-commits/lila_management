@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     DB_PASSWORD: str = "root"
     DB_HOST: str = "localhost"      
     DB_PORT: str = "3306"
-    DB_NAME: str = "lila_production"      
+    DB_NAME: str = "lila_produccion"      
 
     # ── Entorno ──────────────────────────────────────────────
     DEBUG: bool = True

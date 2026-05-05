@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     # URLs de microservicios
     user_service_url: str = "http://localhost:8000"
     rh_service_url: str = "http://localhost:8001"
+    production_service_url: str = "http://localhost:8002"
+    servicio_service_url: str = "http://localhost:8003"
     
     # CORS
     allowed_origins: str = "http://localhost:5173"

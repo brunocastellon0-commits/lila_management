@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+import httpx
 import app.services.product_service as service
 import app.schemas.producto_schema as schemas
 from app.db import get_db
+from app.config import settings
 
 router = APIRouter()
 # ============================================================
@@ -151,3 +153,69 @@ def delete_product_permanently(
             detail=f"Producto con id {product_id} no encontrado",
         )
     # Sin return: HTTP 204 no envía body
+
+# ============================================================
+# POST /products/despacho
+# Despachar stock a servicio_service
+# ============================================================
+# Descuenta stock local y llama al webhook de recepción en servicio_service
+# ============================================================
+from pydantic import BaseModel
+from decimal import Decimal
+from typing import Optional
+
+class DespachoCreate(BaseModel):
+    product_id: int
+    cantidad: Decimal
+    id_inventario_local_destino: int
+    recibido_por: int
+    notas: Optional[str] = None
+
+@router.post("/despacho", status_code=status.HTTP_201_CREATED)
+def despachar_a_servicio(
+    despacho: DespachoCreate,
+    db: Session = Depends(get_db),
+):
+    """
+    Descuenta stock en Producción y notifica a Servicio para sumar su inventario local.
+    """
+    # 1. Validar y descontar stock local
+    product = service.get_product(db, product_id=despacho.product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+        
+    if product.stock < despacho.cantidad:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Stock insuficiente. Disponible: {product.stock}"
+        )
+        
+    # Actualizar stock
+    product.stock -= despacho.cantidad
+    db.commit()
+    
+    # 2. Notificar a servicio_service
+    # La url del servicio de ventas en config o harcodeada a 8003 si no existe
+    servicio_url = "http://localhost:8003" 
+    try:
+        payload = {
+            "id_inventario_local": despacho.id_inventario_local_destino,
+            "cantidad_recibida": float(despacho.cantidad),
+            "id_produccion_origen": None, # o algun id de lote si tuvieras
+            "recibido_por": despacho.recibido_por,
+            "notas": despacho.notas
+        }
+        with httpx.Client(base_url=servicio_url, timeout=5.0) as client:
+            response = client.post("/inventario/recepcion", json=payload)
+            response.raise_for_status()
+            
+    except Exception as e:
+        # Rollback manual si falla la comunicación
+        product.stock += despacho.cantidad
+        db.commit()
+        raise HTTPException(
+            status_code=503, 
+            detail=f"No se pudo registrar la recepción en servicio_service: {str(e)}"
+        )
+        
+    return {"message": "Despacho registrado con éxito", "nuevo_stock": product.stock}

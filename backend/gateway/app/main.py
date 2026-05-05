@@ -1,45 +1,52 @@
-# app/main.py
+# gateway/app/main.py
+# ─────────────────────────────────────────────────────────────
+# El Gateway es un proxy puro: no tiene base de datos propia.
+# Solo reenvía peticiones a los microservicios correctos.
+# ─────────────────────────────────────────────────────────────
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from app.config import settings
-from app.routers import producto_router
-
-# ── Motor de base de datos ───────────────────────────────────
-engine = create_engine(
-    settings.DATABASE_URL,
-    echo=settings.DEBUG,
-    pool_pre_ping=True,   
-    future=True,
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+from gateway.app.config import settings
+from gateway.app.routes import router as rh_router
+from gateway.app.auth_routes import auth_router
+from gateway.app.servicio_routes import router as servicio_router
+from gateway.app.production_routes import router as production_router
 
 app = FastAPI(
-    title="Lila Management - Product Service",
-    description="Microservicio de gestión de productos",
+    title="Lila Management - API Gateway",
+    description="Gateway central que enruta peticiones a los microservicios",
     version="1.0.0",
-    debug=settings.DEBUG,
+    debug=settings.debug,
 )
 
-
+# ── CORS ─────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=settings.origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ── Routers ──────────────────────────────────────────────────
-app.include_router(producto_router.router)
+# Rutas de RH (empleados, sucursales, roles, postulantes, etc.)
+app.include_router(rh_router, prefix="/rh")
+
+# Rutas de Servicio (cajas, sesiones, pedidos, mesas, inventario, analytics)
+app.include_router(servicio_router, prefix="/servicio")
+
+# Rutas de Producción (productos, despacho a servicio)
+app.include_router(production_router, prefix="/produccion")
+
+# Rutas de autenticación (login, register, me, verify)
+app.include_router(auth_router)
 
 # ── Rutas utilitarias ────────────────────────────────────────
 @app.get("/")
 def root():
-    return {"message": "Product Service is running!"}
+    return {"message": "Lila Management Gateway is running!"}
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "service": "product_service"}
+    return {"status": "ok", "service": "gateway"}

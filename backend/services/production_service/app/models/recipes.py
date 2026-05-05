@@ -20,4 +20,4 @@ class Recipe(Base):
     # Los ingredientes que componen esta receta
     ingredients = relationship("RecipeIngredient", back_populates="recipe", cascade="all, delete-orphan")
     # Dentro de la clase Recipe:
-production_orders = relationship("ProductionOrder", back_populates="recipe")
+    production_orders = relationship("ProductionOrder", back_populates="recipe")
